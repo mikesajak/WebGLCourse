@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="../Common/initShaders.js"></script>
+    <script type="text/javascript" src="../Common/MV.js"></script>
+    <script type="text/javascript" src="twist.js"></script>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+uniform float theta;
+
+void main() {
+    float dist = sqrt(vPosition.x*vPosition.x + vPosition.y*vPosition.y);
+    float cosDTheta = cos(dist * theta);
+    float sinDTheta = sin(dist * theta);
+    gl_Position = vec4(-sinDTheta * vPosition.y + cosDTheta * vPosition.x,
+                        sinDTheta * vPosition.x + cosDTheta * vPosition.y,
+                        0,
+                        1);
+}
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform vec4 color;
+
+void main() {
+    gl_FragColor= color; //vec4(1.0, 1.0, 1.0, 1.0);
+}
+    </script>
+
+    <script>
+        window.onload = function init() {
+            printValue('tessDepthSlider', 'tessDepthValue');
+            printValue('thetaSlider', 'thetaValue');
+
+            initGL();
+        }
+
+        function printValue(inputId, outputId) {
+            var inputElem = document.getElementById(inputId);
+            var outputElem = document.getElementById(outputId);
+            outputElem.value = inputElem.value;
+        }
+    </script>
+</head>
+
+<body>
+    <section>
+        <h1>WebGL Tesselation Twist</h1>
+        <header>
+            <table>
+                <tr>
+                    <td>
+                        <label for="thetaSlider">Theta</label>
+                    </td>
+                    <td>
+                        <input id="thetaSlider" type="range" list="thetaSliderTicks" min="0" max="360" step="1"
+                               value="0"
+                               oninput="printValue('thetaSlider', 'thetaValue')"/>
+                        <datalist id="thetaSliderTicks">
+                            <option>0</option>
+                            <option>Π/2</option>
+                            <option>Π</option>
+                            <option>3/2 Π</option>
+                            <option>2 Π</option>
+                        </datalist>
+                        <output id="thetaValue"></output>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="tessDepthSlider">Tesselation depth:</label>
+                    </td>
+                    <td>
+                        <input id="tessDepthSlider" type="range" min="0" max="10" step="1"
+                               value="5"
+                               oninput="printValue('tessDepthSlider', 'tessDepthValue')"/>
+                        <output id="tessDepthValue"></output>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="colorChooser">Triangle color:</label>
+                    </td>
+                    <td>
+                        <input id="colorChooser" type="color" value="#FF1010"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="sierpModeCheckbox">Sierpinski mode:</label></td>
+                    <td><input id="sierpModeCheckbox" type="checkbox"/></td>
+                </tr>
+                <tr>
+                    <td><label for="wireframeCheckbox">Wireframe:</label></td>
+                    <td><input id="wireframeCheckbox" type="checkbox"/></td>
+                </tr>
+            </table>
+        </header>
+
+        <article>
+            <canvas id="gl-canvas" width=512 height=512>
+                Oops... your browser doesn't support the HTML5 canvas element
+            </canvas>
+            </article>
+    </section>
+
+</body>
+</html>

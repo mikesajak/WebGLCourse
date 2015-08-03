@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="../Common/initShaders.js"></script>
+    <script type="text/javascript" src="../Common/MV.js"></script>
+    <script type="text/javascript" src="paint.js"></script>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+
+attribute vec4 vPosition;
+
+void main()
+{
+    gl_Position = vPosition;
+}
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+
+precision mediump float;
+
+uniform vec4 uColor;
+void main()
+{
+    gl_FragColor = uColor;
+}
+    </script>
+
+    <script>
+        window.onload = function init() {
+            initGL();
+        }
+
+        function printValue(inputId, outputId) {
+            var inputElem = document.getElementById(inputId);
+            var outputElem = document.getElementById(outputId);
+            outputElem.value = inputElem.value;
+        }
+    </script>
+</head>
+
+<body>
+    <section>
+        <h1>WebGL Painting</h1>
+        <header>
+            <table>
+                <tr>
+                    <td>
+                        <label for="colorChooser">Color:</label>
+                    </td>
+                    <td>
+                        <input id="colorChooser" type="color" value="#FF1010"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="lineWidthSlider">Line width:</label></td>
+                    <td>
+                        <input id="lineWidthSlider" type="range" min="1" max="5" value="1" oninput="printValue('lineWidthSlider', 'lineWidthValue')"/>
+                        <output id="lineWidthValue"></output>
+                    </td>
+                </tr>
+            </table>
+        </header>
+
+        <article>
+            <canvas id="gl-canvas" width=512 height=512 style="border:1px solid #000000;">
+                Oops... your browser doesn't support the HTML5 canvas element
+            </canvas>
+            </article>
+    </section>
+
+</body>
+</html>
