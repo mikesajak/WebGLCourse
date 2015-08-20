@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<style>
+html {
+    background: #f06;
+    background: linear-gradient(45deg, #c0d6e7, #90afde);
+    min-height: 100%;
+
+    font-family: sans-serif;
+    font-size: 70%;
+}
+
+#wrapper {
+    width: 1200px;
+    background-color: #FFF;
+    <!--margin-left:auto;-->
+    <!--margin-right:auto;-->
+    margin: 0 auto;
+}
+
+header {
+    height: 100px;
+}
+
+nav {
+    width:960px;
+}
+
+#content {
+    float: left;
+    width:520px;
+    height: 100%;
+
+}
+
+#leftcol {
+    float: left;
+    width: 340px;
+    overflow: auto;
+    height: 512px;
+}
+
+#rightcol {
+    float: left;
+    width: 340px;
+    overflow: auto;
+    height: 512px;
+}
+
+footer {
+    clear:both;
+    height: 200px;
+}
+
+.featured-header {
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    text-align: center;
+    border-color: #999;
+
+    padding-top: 0px;
+}
+.featured-header.color {
+    border-color: orange;
+}
+.featured-header.color legend{
+    color: orange;
+}
+.featured-header.radius {
+    border-radius: 12px;
+}
+.featured-header.double {
+    border-style: double;
+    border-top-width: 6px;
+    border-right-width: 0px;
+    border-bottom-width: 0px;
+    border-left-width: 0px;
+}
+.featured-header.cool {
+    font-family: sans-serif;
+    margin-bottom: 0px;
+    margin-top: 5px;
+}
+.featured-header legend {
+    -webkit-padding-start: 8px;
+    -webkit-padding-end: 8px;
+    background: transparent;
+    /** It's cool because you don't need to fill your bg-color as you would need to in some of the other examples that you can find (: */
+    font-weight: normal;
+    /* I preffer the text to be regular instead of bold  */
+    color: #333;
+}
+
+.label {
+    display: inline-block; width: 50px; text-align: right;
+}
+
+input[type=text] {
+    width: 40px;
+}
+
+</style>
+
+    <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="../Common/initShaders.js"></script>
+    <script type="text/javascript" src="../Common/MV.js"></script>
+    <script type="text/javascript" src="cad.js"></script>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+
+attribute vec4 vPosition;
+attribute vec4 vColor;
+varying vec4 fColor;
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+uniform vec4 uColor;
+
+void main()
+{
+    gl_Position = projectionMatrix * modelViewMatrix * vPosition;
+    fColor = uColor;
+}
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+
+precision mediump float;
+
+varying vec4 fColor;
+void main()
+{
+    gl_FragColor = fColor;
+}
+    </script>
+
+    <script>
+        window.onload = function init() {
+            initGL();
+        }
+
+        function copyValue(inputId, outputId) {
+            var inputElem = document.getElementById(inputId);
+            var outputElem = document.getElementById(outputId);
+            outputElem.value = inputElem.value;
+            outputElem.oninput();
+        }
+
+        function setValue(outputId, value) {
+            var outputElem = document.getElementById(outputId);
+            outputElem.value = value;
+            outputElem.oninput();
+        }
+    </script>
+</head>
+
+<body>
+    <header>
+        <h1>WebGL CAD</h1>
+    </header>
+
+    <section id="wrapper">
+
+        <article id="leftcol">
+            <table>
+                <tr>
+                    <td colspan="10"><fieldset class="featured-header cool"><legend>View options</legend></fieldset></td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="showGridCheckbox">Show grid</label></td>
+                    <td><input id="showGridCheckbox" type="checkbox" checked></td>
+                </tr>
+
+                <tr>
+                    <td colspan="10"><fieldset class="featured-header cool"><legend>Camera</legend></fieldset></td>
+                </tr>
+                <tr>
+                    <td>Position</td>
+                    <td>
+                        <label for="camXPosText">X:</label><input id="camXPosText" type="text" size="1" value="0"
+                                                                  oninput="copyValue('camXPosText', 'camXPosSlider')">
+                        <label for="camYPosText">Y:</label><input id="camYPosText" type="text" size="1" value="7"
+                                                                  oninput="copyValue('camYPosText', 'camYPosSlider')">
+                        <label for="camZPosText">Z:</label><input id="camZPosText" type="text" size="1" value="-15"
+                                                                  oninput="copyValue('camZPosText', 'camZPosSlider')">
+                        <button id="camPosResetButton" onclick="setValue('camXPosText',0); setValue('camYPosText', 7); setValue('camZPosText', -15);">Reset</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="camXPosSlider">X</label>
+                    </td>
+                    <td>
+                        <input id="camXPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('camXPosSlider', 'camXPosText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="camYPosSlider">Y</label>
+                    </td>
+                    <td>
+                        <input id="camYPosSlider" type="range" min="-10" max="10" value="7" step="0.01"
+                               oninput="copyValue('camYPosSlider', 'camYPosText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="camZPosSlider">Z</label>
+                    </td>
+                    <td>
+                        <input id="camZPosSlider" type="range" min="-20" max="20" value="-15" step="0.01"
+                               oninput="copyValue('camZPosSlider', 'camZPosText')"/>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="10"><fieldset class="featured-header cool"><legend>Lights</legend></fieldset></td>
+                </tr>
+                <tr>
+                    <td>TODO...</td>
+                </tr>
+            </table>
+        </article>
+
+        <article id="content">
+            <canvas id="gl-canvas" width=512 height=512 style="border:1px solid #000000;">
+                Oops... your browser doesn't support the HTML5 canvas element
+            </canvas>
+        </article>
+
+        <article id="rightcol">
+            <table>
+                <tr>
+                    <td colspan="10"><fieldset class="featured-header cool"><legend>Create model</legend></fieldset></td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="modelTypeChooser">Model:</label></td>
+                    <td>
+                        <select id="modelTypeChooser"></select>
+                        <button id="createModelButton">Create</button>
+                    </td>
+                </tr>
+
+
+                <tr>
+                    <td colspan="10"><fieldset class="featured-header cool"><legend>Modify model</legend></fieldset></td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="selModelChooser">Selection:</label></td>
+                    <td>
+                        <select id="selModelChooser">
+                            <option value=""/>
+                        </select>
+                        <button id="deleteModelButton" disabled="true">Delete</button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Position</td>
+                    <td>
+                        <label for="xPosText">X:</label><input id="xPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('xPosText', 'xPosSlider')">
+                        <label for="yPosText">Y:</label><input id="yPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('yPosText', 'yPosSlider')">
+                        <label for="zPosText">Z:</label><input id="zPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('zPosText', 'zPosSlider')">
+                        <button id="posResetButton" onclick="setValue('xPosText',0); setValue('yPosText', 0); setValue('zPosText', 0);">Reset</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="xPosSlider">X</label>
+                    </td>
+                    <td>
+                        <input id="xPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('xPosSlider', 'xPosText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="yPosSlider">Y</label>
+                    </td>
+                    <td>
+                        <input id="yPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('yPosSlider', 'yPosText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="zPosSlider">Z</label>
+                    </td>
+                    <td>
+                        <input id="zPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('zPosSlider', 'zPosText')"/>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Rotation</td>
+                    <td>
+                        <label for="xRotText">X:</label><input id="xRotText" type="text" size="1" value="0"
+                                                               oninput="copyValue('xRotText', 'xRotSlider')">
+                        <label for="yRotText">Y:</label><input id="yRotText" type="text" size="1" value="0"
+                                                               oninput="copyValue('yRotText', 'yRotSlider')">
+                        <label for="zRotText">Z:</label><input id="zRotText" type="text" size="1" value="0"
+                                                               oninput="copyValue('zRotText', 'zRotSlider')">
+                        <button id="rotResetButton" onclick="setValue('xRotText',0); setValue('yRotText', 0); setValue('zRotText', 0);">Reset</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="xRotSlider">X</label>
+                    </td>
+                    <td>
+                        <input id="xRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                               oninput="copyValue('xRotSlider', 'xRotText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="yRotSlider">Y</label>
+                    </td>
+                    <td>
+                        <input id="yRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                               oninput="copyValue('yRotSlider', 'yRotText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="zRotSlider">Z</label>
+                    </td>
+                    <td>
+                        <input id="zRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                               oninput="copyValue('zRotSlider', 'zRotText')"/>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Scale</td>
+                    <td>
+                        <label for="xScaleText">X:</label><input id="xScaleText" type="text" size="1" value="1"
+                                                               oninput="copyValue('xScaleText', 'xScaleSlider')">
+                        <label for="yScaleText">Y:</label><input id="yScaleText" type="text" size="1" value="1"
+                                                               oninput="copyValue('yScaleText', 'yScaleSlider')">
+                        <label for="zScaleText">Z:</label><input id="zScaleText" type="text" size="1" value="1"
+                                                               oninput="copyValue('zScaleText', 'zScaleSlider')">
+                        <button id="scaleResetButton" onclick="setValue('xScaleText',1); setValue('yScaleText', 1); setValue('zScaleText', 1);">Reset</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="xScaleSlider">X</label>
+                    </td>
+                    <td>
+                        <input id="xScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
+                               oninput="copyValue('xScaleSlider', 'xScaleText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="yScaleSlider">Y</label>
+                    </td>
+                    <td>
+                        <input id="yScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
+                               oninput="copyValue('yScaleSlider', 'yScaleText')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">
+                        <label for="zScaleSlider">Z</label>
+                    </td>
+                    <td>
+                        <input id="zScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
+                               oninput="copyValue('zScaleSlider', 'zScaleText')"/>
+                    </td>
+                </tr>
+                
+            </table>
+        </article>
+
+    </section>
+
+    <footer></footer>
+
+</body>
+</html>
