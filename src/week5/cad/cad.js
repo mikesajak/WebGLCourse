@@ -117,6 +117,8 @@ var basePlaneGrid = {
 }
 var showBasePlaneGrid = true;
 
+var showWireframe = true;
+
 var renderFunc = null;
 
 var modelTypes = [];
@@ -126,7 +128,9 @@ var selectedModelName = null;
 var selectedCamera = null;
 
 var blink = false;
+var blinkTimer = null;
 
+var useLighting = false;
 var selModelChooser = null;
 var modelTypeChooser = null;
 var modelPropertyWidgets = [];
@@ -155,15 +159,14 @@ function initGL() {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.polygonOffset(1.0, 1.0);
 
-    // Load shaders and initialize attribute buffers
-    var program = initShaders(gl, "vertex-shader", "fragment-shader");
-    gl.useProgram(program);
+    // Load shaders
+    var shaderVars = initShaderVars("vertex-shader-simple", "fragment-shader-simple");
 
-    var shaderVars = initShaderVars(program);
+//    var vertexLightingShaderVars = initLightingShaderVars("vertex-shader-vertex-lighting", "fragment-shader-simple");
 
     var camera = {
         name: "camera1",
-        eye: vec3(0, 7, -15), // move camera back in Z and a little up to create nice angle looking at origin
+        eye: vec3(0, 7, 15), // move camera back in Z and a little up to create nice angle looking at origin
         at: vec3(0, 0, 0),
         up: vec3(0, 1, 0),
 
@@ -187,11 +190,6 @@ function initGL() {
 //        window.requestAnimFrame(renderFunc);
     };
 
-    setInterval(function () {
-            blink = !blink;
-            window.requestAnimFrame(renderFunc);
-        }, 500);
-
     window.requestAnimFrame(renderFunc);
 }
 
@@ -203,7 +201,8 @@ function render(shaderVars, camera, basePlaneGrid) {
     gl.uniformMatrix4fv(shaderVars.projectionMatrix, false, flatten(camera.projectionMatrix));
 
     if (showBasePlaneGrid) {
-        renderModel(shaderVars, basePlaneGrid, camera.viewMatrix, gl.LINES);
+        prepareFlatShaderForModel(shaderVars, basePlaneGrid, camera.viewMatrix);
+        drawModelItems(shaderVars, basePlaneGrid, gl.LINES);
     }
 
     for (var modelName in modelInstances) {
@@ -214,29 +213,24 @@ function render(shaderVars, camera, basePlaneGrid) {
 
         gl.enable(gl.POLYGON_OFFSET_FILL);
         if (model.name == selectedModelName && blink) {
-            renderModel(shaderVars, model, modelViewMatrix, gl.TRIANGLES, selectedFaceColor);
+            prepareFlatShaderForModel(shaderVars, model, modelViewMatrix, selectedFaceColor);
         } else {
-            renderModel(shaderVars, model, modelViewMatrix, gl.TRIANGLES);
+            prepareFlatShaderForModel(shaderVars, model, modelViewMatrix);
         }
+        drawModelItems(shaderVars, model, gl.TRIANGLES);
+
         gl.disable(gl.POLYGON_OFFSET_FILL);
 
-//        renderModel(shaderVars, model, modelViewMatrix, gl.LINE_LOOP, wireframeColor);
-        prepareShaderForModel(shaderVars, model, modelViewMatrix, wireframeColor);
-        if (isValid(model.faceIndexBuffer)) {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.faceIndexBuffer.id);
-            for (var i = 0; i < model.faceIndexBuffer.numItems / 3; i++) {
-                gl.drawElements(gl.LINE_LOOP, 3, gl.UNSIGNED_SHORT, i * 3 * model.faceIndexBuffer.itemSize);
-            }
-        } else {
-            for (var i = 0; i < model.vertexPosBuffer.numItems / 3; i++) {
-                gl.drawArrays(gl.LINE_LOOP, i*3, 3);
-            }
+        if (showWireframe) {
+            prepareFlatShaderForModel(shaderVars, model, modelViewMatrix, wireframeColor);
+            drawModelWireframe(shaderVars, model);
         }
-
     }
 }
 
-function prepareShaderForModel(shaderVars, model, modelViewMatrix, forceColor) {
+function prepareFlatShaderForModel(shaderVars, model, modelViewMatrix, forceColor) {
+    gl.useProgram(shaderVars.programId);
+
     gl.uniformMatrix4fv(shaderVars.modelViewMatrix, false, flatten(modelViewMatrix));
 
     var color = forceColor != null ? forceColor : model.color;
@@ -260,22 +254,46 @@ function drawModelItems(shaderVars, model, renderMode) {
     }
 }
 
-function renderModel(shaderVars, model, modelViewMatrix, renderMode, forceColor) {
-    prepareShaderForModel(shaderVars, model, modelViewMatrix, forceColor);
-    drawModelItems(shaderVars, model, renderMode);
+function drawModelWireframe(shaderVars, model) {
+    if (isValid(model.faceIndexBuffer)) {
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.faceIndexBuffer.id);
+        for (var i = 0; i < model.faceIndexBuffer.numItems / 3; i++) {
+            gl.drawElements(gl.LINE_LOOP, 3, gl.UNSIGNED_SHORT, i * 3 * model.faceIndexBuffer.itemSize);
+        }
+    } else {
+        for (var i = 0; i < model.vertexPosBuffer.numItems / 3; i++) {
+            gl.drawArrays(gl.LINE_LOOP, i*3, 3);
+        }
+    }
 }
 
-function initShaderVars(program) {
+
+function initShaderVars(vertexShader, fragmentShader) {
+    console.log("initShaderVars: vertexShader=" + vertexShader + ", framentShader=" + fragmentShader);
+    var program = initShaders(gl, vertexShader, fragmentShader);
+    gl.useProgram(program);
+
     var shaderVars =  {
-        vPosition : gl.getAttribLocation(program, "vPosition"),
-        vColor : gl.getAttribLocation(program, "vColor"),
-        projectionMatrix : gl.getUniformLocation(program, "projectionMatrix"),
-        modelViewMatrix : gl.getUniformLocation(program, "modelViewMatrix"),
-        uColor : gl.getUniformLocation(program, "uColor")
+        programId: program,
+        vPosition : gl.getAttribLocation(program, "aPosition"),
+        vColor : gl.getAttribLocation(program, "aColor"),
+
+        projectionMatrix : gl.getUniformLocation(program, "uProjectionMatrix"),
+        modelViewMatrix : gl.getUniformLocation(program, "uModelViewMatrix"),
+//        normalMatrix : gl.getUniformLocation(program, "uNormalMatrix")
+
+        uForceColor : gl.getUniformLocation(program, "uForceColor"),
+        uColor : gl.getUniformLocation(program, "uColor"),
+
+        uMaterial : gl.getUniformLocation(program, "uMaterial"),
+        uLightingModel : gl.getUniformLocation(program, "uLightingModel"),
+        uLights : gl.getUniformLocation(program, "uLights")
     };
 
     gl.enableVertexAttribArray(shaderVars.vPosition);
 //    gl.enableVertexAttribArray(shaderVars.vColor);
+
+    console.log("shaderVars: " + JSON.stringify(shaderVars));
     return shaderVars;
 }
 
@@ -309,7 +327,6 @@ function linkGUIModelProperty(widgetId, selectorFunc, property, index, conversio
     return widget;
 }
 
-
 function installGuiHandlers(shaderVars) {
     var showGridCheckbox = document.getElementById("showGridCheckbox");
     showGridCheckbox.onclick = function() {
@@ -318,11 +335,25 @@ function installGuiHandlers(shaderVars) {
     }
     showBasePlaneGrid = showGridCheckbox.checked;
 
+    var showWireframeCheckbox = document.getElementById("showWireframeCheckbox");
+    showWireframeCheckbox.onclick = function() {
+        showWireframe = showWireframeCheckbox.checked;
+        window.requestAnimFrame(renderFunc);
+    }
+    showWireframe = showWireframeCheckbox.checked;
+
     // camera position
     var camXPosSlider = linkGUIModelProperty("camXPosSlider", cameraSelector, "eye", 0);
     var camYPosSlider = linkGUIModelProperty("camYPosSlider", cameraSelector, "eye", 1);
     var camZPosSlider = linkGUIModelProperty("camZPosSlider", cameraSelector, "eye", 2);
     selectedCamera.eye = vec3(camXPosSlider.value, camYPosSlider.value, camZPosSlider.value);
+
+    var lightingModelChooser = document.getElementById("lightingModelChooser");
+    lightingModelChooser.onchange = function() {
+        useLighting = lightingModelChooser.value == "lighting";
+        window.requestAnimFrame(renderFunc);
+    };
+    useLighting = lightingModelChooser.value == "lighting";
 
     // position
 
@@ -380,6 +411,12 @@ function installGuiHandlers(shaderVars) {
 //        origSelModelChooserOnChange();
         selectedModelName = selModelChooser.value;
         var selectedModel = modelInstances[selectedModelName];
+
+        if (blinkTimer != null) {
+            clearInterval(blinkTimer);
+            blinkTimer = null;
+        }
+
         if (selectedModel != null) {
             xPosText.value = selectedModel.position[0]; xPosText.oninput();
             yPosText.value = selectedModel.position[1]; yPosText.oninput();
@@ -392,6 +429,12 @@ function installGuiHandlers(shaderVars) {
             xScaleText.value= selectedModel.scale[0]; xScaleText.oninput();
             yScaleText.value= selectedModel.scale[1]; yScaleText.oninput();
             zScaleText.value= selectedModel.scale[2]; zScaleText.oninput();
+
+            blinkTimer = setInterval(function () {
+                    blink = !blink;
+                    window.requestAnimFrame(renderFunc);
+                }, 500);
+
         }
 
         updateModelPropertyWidgets();
@@ -414,6 +457,8 @@ function installGuiHandlers(shaderVars) {
 
         window.requestAnimFrame(renderFunc);
     }
+
+
 }
 
 function updateModelPropertyWidgets() {
@@ -502,8 +547,7 @@ function generateConeModel(numPoints, radius, height) {
 
     generateConeFan(numPoints, radius, 0, height, model.vertices, model.faces);
     generateConeFan(numPoints, radius, 0, 0, model.vertices, model.faces, model.vertices.length - numPoints);
-//    generateCap(numPoints, radius, 0, height, model.vertices, model.faces);
-//    generateCap(numPoints, radius, 0, 0, model.vertices, model.faces, true);
+
     return model;
 }
 
@@ -686,78 +730,6 @@ function generateFan(numPoints, tipVertexGenerator, baseVerticesGenerator, verti
 //    console.log("--faces(" + faces.length + ")=" + JSON.stringify(faces));
 }
 
-
-
-//function generateCylinderStrip2(numPoints, radius1, yOffset1, radius2, yOffset2, vertices, faces, reuseVertices) {
-//    console.log("generateCylinderStrip: numPoints=" + numPoints + ", radius1=" + radius1 + ", yOffset1=" + yOffset1
-//                + ", radius2=" + radius2 + ", yOffset2=" + yOffset2 + ", reuseVertices=" + reuseVertices);
-//    var row1StartIdx = vertices.length / 3;
-//
-//    if (reuseVertices) {
-//        row1StartIdx -= numPoints;
-//    }
-//
-//    var row2StartIdx = row1StartIdx + numPoints;
-//
-//    var step = 2 * Math.PI / numPoints;
-//    if (!reuseVertices) {
-//        for (var i = 0; i < numPoints ; i++) {
-//            var theta = i * step;
-//
-//            var x1 = radius1 * Math.cos(theta);
-//            var z1 = radius1 * Math.sin(theta);
-//            vertices.push(x1, yOffset1, z1);
-//        }
-//    }
-//
-//    for (var i = 0; i < numPoints; i++) {
-//        var theta = i * step;
-//
-//        var x2 = radius2 * Math.cos(theta);
-//        var z2 = radius2 * Math.sin(theta);
-//        vertices.push(x2, yOffset2, z2);
-//    }
-//
-//    for (var i = 0; i < numPoints - 1; i++) {
-//        faces.push(row1StartIdx + i, row1StartIdx + i + 1, row2StartIdx + i);
-//        faces.push(row2StartIdx + i, row2StartIdx + i + 1, row1StartIdx + i + 1);
-//    }
-//
-//    faces.push(row1StartIdx + numPoints-1, row1StartIdx, row2StartIdx + numPoints - 1);
-//    faces.push(row1StartIdx, row2StartIdx + numPoints - 1, row2StartIdx);
-//}
-//
-//function generateCap(numPoints, radius, yBase, yOffset, vertices, faces, reuseVertices, firstIdx) {
-//
-//    console.log("generateCap: numPoints=" + numPoints + ", radius=" + radius + ", yBase=" + yBase + ", yOffset=" + yOffset +
-//                ", reuseVertices=" + reuseVertices + ", firstIdx=" + firstIdx);
-//    var centerIdx = vertices.length / 3;
-//
-//    vertices.push(0.0, yOffset, 0.0);
-//
-//    var firstIdx = centerIdx + 1;
-//    if (reuseVertices) {
-//        if (typeof firstIdx !== 'undefined' || firstIdx == null) {
-//            firstIdx = centerIdx - numPoints;
-//        }
-//    }
-//
-//    var step = 2 * Math.PI / numPoints;
-//    for (var i = 0; i < numPoints ; i++) {
-//        if (!reuseVertices) {
-//            var theta = i * step;
-//            var x = radius * Math.cos(theta);
-//            var z = radius * Math.sin(theta);
-//
-//            vertices.push(x, yBase, z);
-//        }
-//        if (i < numPoints-1) {
-//            faces.push(centerIdx, firstIdx + i, firstIdx + i + 1);
-//        }
-//    }
-//
-//    faces.push(centerIdx, firstIdx + numPoints - 1, firstIdx);
-//}
 
 function generateGrid(N, stepX, stepZ, y) {
     var minX = -N/2*stepX
