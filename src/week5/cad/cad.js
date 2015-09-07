@@ -10,7 +10,7 @@ Math.degrees = function(radians) {
     return radians * 180 / Math.PI;
 }
 
-var CubeModel = {
+var CubeModel2 = {
     name : "Cube",
     vertices : [
         vec3(-0.5, -0.5, -0.5), // 0
@@ -30,6 +30,55 @@ var CubeModel = {
         vec3(0, 3, 4),  vec3(3, 4, 7), // right
         vec3(1, 2, 6),  vec3(1, 6, 5), // left
         vec3(4, 5, 6),  vec3(4, 6, 7), // back
+    ]
+}
+
+var CubeModel = {
+    name: "Cube",
+    vertices: [
+      // Front face
+      vec3(-1.0, -1.0,  1.0),
+      vec3( 1.0, -1.0,  1.0),
+      vec3( 1.0,  1.0,  1.0),
+      vec3(-1.0,  1.0,  1.0),
+
+      // Back face
+      vec3(-1.0, -1.0, -1.0),
+      vec3(-1.0,  1.0, -1.0),
+      vec3( 1.0,  1.0, -1.0),
+      vec3( 1.0, -1.0, -1.0),
+
+      // Top face
+      vec3(-1.0,  1.0, -1.0),
+      vec3(-1.0,  1.0,  1.0),
+      vec3( 1.0,  1.0,  1.0),
+      vec3( 1.0,  1.0, -1.0),
+
+      // Bottom face
+      vec3(-1.0, -1.0, -1.0),
+      vec3( 1.0, -1.0, -1.0),
+      vec3( 1.0, -1.0,  1.0),
+      vec3(-1.0, -1.0,  1.0),
+
+      // Right face
+      vec3( 1.0, -1.0, -1.0),
+      vec3( 1.0,  1.0, -1.0),
+      vec3( 1.0,  1.0,  1.0),
+      vec3( 1.0, -1.0,  1.0),
+
+      // Left face
+      vec3(-1.0, -1.0, -1.0),
+      vec3(-1.0, -1.0,  1.0),
+      vec3(-1.0,  1.0,  1.0),
+      vec3(-1.0,  1.0, -1.0)
+    ],
+    faces: [
+      vec3(0,  1,  2),      vec3(0,  2,  3),    // front
+      vec3(4,  5,  6),      vec3(4,  6,  7),    // back
+      vec3(8,  9,  10),     vec3(8,  10, 11),   // top
+      vec3(12, 13, 14),     vec3(12, 14, 15),   // bottom
+      vec3(16, 17, 18),     vec3(16, 18, 19),   // right
+      vec3(20, 21, 22),     vec3(20, 22, 23)    // left
     ]
 }
 
@@ -113,11 +162,11 @@ var OctahedronModel = {
 var basePlaneGrid = {
     vertices : [],
 
-    vertexBuffer : null
+    vertexPosBuffer : null
 }
 var showBasePlaneGrid = true;
-
 var showWireframe = true;
+var drawNormals = false;
 
 var renderFunc = null;
 
@@ -126,9 +175,6 @@ var modelInstances = [];
 
 var selectedModelName = null;
 var selectedCamera = null;
-
-var blink = false;
-var blinkTimer = null;
 
 var useLighting = false;
 var selModelChooser = null;
@@ -140,6 +186,28 @@ var planeGridColor = vec4(0.6, 0.6, 0.6, 1)
 var defaultFaceColor = vec4(1, 1, 1, 1)
 var selectedFaceColor = vec4(1, 0, 0, 0.1)
 var wireframeColor = vec4(0.4, 0.4, 0.4, 1)
+
+var globalAmbient = vec4(0.3, 0.3, 0.3, 1);
+
+var workBuffer;
+
+var defaultMaterial = {
+    ambient: vec3(0.5, 0.5, 0.5),
+    diffuse: vec3(0.5, 0.5, 0.5),
+    specular: vec3(1.0, 1.0, 1.0),
+    shininess: 50
+}
+
+var lights = [
+    {
+        enabled: true,
+        position: vec4(10, 5, 10, 1),
+        diffuse : vec3(0.2, 0.9, 0.9),
+        specular: vec3(1.0, 0, 0)
+    }
+];
+
+var MAX_NUM_LIGHTS = 8;
 
 
 function initGL() {
@@ -161,8 +229,7 @@ function initGL() {
 
     // Load shaders
     var shaderVars = initShaderVars("vertex-shader-simple", "fragment-shader-simple");
-
-//    var vertexLightingShaderVars = initLightingShaderVars("vertex-shader-vertex-lighting", "fragment-shader-simple");
+    var vertexLightingShaderVars = initLightingShaderVars("vertex-shader-vertex-lighting", "fragment-shader-simple");
 
     var camera = {
         name: "camera1",
@@ -184,25 +251,34 @@ function initGL() {
     camera.projectionMatrix = perspective(45, canvas.width / canvas.height, 0.1, 100);
     camera.viewMatrix = lookAt(camera.eye, camera.at, camera.up);
 
+    workBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(100 * sizeof['vec3']), gl.DYNAMIC_DRAW);
+
 
     renderFunc = function() {
-        render(shaderVars, camera, basePlaneGrid);
+        render(shaderVars, vertexLightingShaderVars, camera, basePlaneGrid);
 //        window.requestAnimFrame(renderFunc);
     };
 
     window.requestAnimFrame(renderFunc);
 }
 
-function render(shaderVars, camera, basePlaneGrid) {
+function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
     gl.clearColor(sheetColor[0], sheetColor[1], sheetColor[2], sheetColor[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     camera.viewMatrix = lookAt(camera.eye, camera.at, camera.up);
-    gl.uniformMatrix4fv(shaderVars.projectionMatrix, false, flatten(camera.projectionMatrix));
+
+    gl.useProgram(simpleShaderVars.program);
+    gl.uniformMatrix4fv(simpleShaderVars.projectionMatrix, false, flatten(camera.projectionMatrix));
+
+    gl.useProgram(lightingShaderVars.program);
+    gl.uniformMatrix4fv(lightingShaderVars.projectionMatrix, false, flatten(camera.projectionMatrix));
 
     if (showBasePlaneGrid) {
-        prepareFlatShaderForModel(shaderVars, basePlaneGrid, camera.viewMatrix);
-        drawModelItems(shaderVars, basePlaneGrid, gl.LINES);
+        prepareFlatShaderForModel(simpleShaderVars, camera.viewMatrix, basePlaneGrid);
+        drawModelItems(basePlaneGrid, gl.LINES);
     }
 
     for (var modelName in modelInstances) {
@@ -212,40 +288,137 @@ function render(shaderVars, camera, basePlaneGrid) {
         var modelViewMatrix = mult(camera.viewMatrix, mkModelMatrix(model));
 
         gl.enable(gl.POLYGON_OFFSET_FILL);
-        if (model.name == selectedModelName && blink) {
-            prepareFlatShaderForModel(shaderVars, model, modelViewMatrix, selectedFaceColor);
+        if (useLighting) {
+            var normalMatrix = calcNormalMatrix(modelViewMatrix);
+            prepareLightingShaderForModel(lightingShaderVars, modelViewMatrix, camera.viewMatrix, normalMatrix, model, globalAmbient, lights);
         } else {
-            prepareFlatShaderForModel(shaderVars, model, modelViewMatrix);
+            prepareFlatShaderForModel(simpleShaderVars, modelViewMatrix, model);
         }
-        drawModelItems(shaderVars, model, gl.TRIANGLES);
-
+        drawModelItems(model, gl.TRIANGLES);
         gl.disable(gl.POLYGON_OFFSET_FILL);
 
         if (showWireframe) {
-            prepareFlatShaderForModel(shaderVars, model, modelViewMatrix, wireframeColor);
-            drawModelWireframe(shaderVars, model);
+            prepareFlatShaderForModel(simpleShaderVars, modelViewMatrix, model, wireframeColor);
+            drawModelWireframe(model);
+        }
+
+        if (model.name == selectedModelName) {
+            // todo: create and update bounding box data only on selection change and/or selected model/camera changes
+            var aabb = boundingBox(model.model.vertices, mat4(), 0.1);
+            var aabbVertices = [
+                // front
+                vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.min[1], aabb.min[2]),
+                vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.max[1], aabb.min[2]),
+                vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.max[1], aabb.min[2]),
+                vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.min[1], aabb.min[2]),
+
+                // back
+                vec3(aabb.min[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.min[1], aabb.max[2]),
+                vec3(aabb.max[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.max[1], aabb.max[2]),
+                vec3(aabb.max[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.max[1], aabb.max[2]),
+                vec3(aabb.min[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.min[1], aabb.max[2]),
+
+                // links between front and back
+                vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.min[0], aabb.min[1], aabb.max[2]),
+                vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.min[1], aabb.max[2]),
+                vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.max[0], aabb.max[1], aabb.max[2]),
+                vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.max[1], aabb.max[2]),
+            ];
+            gl.useProgram(simpleShaderVars.program);
+            gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
+            for (var i = 0; i < aabbVertices.length; i++) {
+                gl.bufferSubData(gl.ARRAY_BUFFER, i* sizeof['vec3'], flatten(aabbVertices[i]));
+            }
+
+            gl.vertexAttribPointer(simpleShaderVars.vPosition, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(simpleShaderVars.vPosition);
+            var aabbModel = {
+                name: "aabb",
+                vertices: aabbVertices,
+                vertexPosBuffer: {id: workBuffer, itemSize: 3, numItems: aabbVertices.length/3},
+
+                color: vec4(1,0,0,0.5)
+            };
+            prepareFlatShaderForModel(simpleShaderVars, modelViewMatrix, aabbModel);
+
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.enable(gl.BLEND);
+            gl.drawArrays(gl.LINES, 0, 24);
+            gl.disable(gl.BLEND);
         }
     }
 }
 
-function prepareFlatShaderForModel(shaderVars, model, modelViewMatrix, forceColor) {
-    gl.useProgram(shaderVars.programId);
+function calcNormalMatrix(modelViewMatrix) {
+    var N = mat3(modelViewMatrix[0][0], modelViewMatrix[0][1], modelViewMatrix[0][2],
+                 modelViewMatrix[1][0], modelViewMatrix[1][1], modelViewMatrix[1][2],
+                 modelViewMatrix[2][0], modelViewMatrix[2][1], modelViewMatrix[2][2]);
+    N = transpose(inverseMat3(N));
+    return N;
+}
+
+function prepareFlatShaderForModel(shaderVars, modelViewMatrix, model, forceColor) {
+    gl.useProgram(shaderVars.program);
 
     gl.uniformMatrix4fv(shaderVars.modelViewMatrix, false, flatten(modelViewMatrix));
 
-    var color = forceColor != null ? forceColor : model.color;
+    var color = forceColor != null ? forceColor :
+                    (isValid(model.material) ? model.material.diffuse : model.color);
     gl.uniform4f(shaderVars.uColor, color[0], color[1], color[2], color[3]);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexPosBuffer.id);
+    gl.enableVertexAttribArray(shaderVars.vPosition);
     gl.vertexAttribPointer(shaderVars.vPosition, model.vertexPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-    if (model.vertexColorBuffer != null) {
+    if (isValid(model.vertexColorBuffer)) {
         gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexColorBuffer.id);
         gl.vertexAttribPointer(shaderVars.vColor, model.vertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
     }
 }
 
-function drawModelItems(shaderVars, model, renderMode) {
+function prepareShaderLightData(shaderVars, lightNum, light) {
+    gl.uniform1i(shaderVars.lights[lightNum].enabled,  light.enabled);
+    gl.uniform4f(shaderVars.lights[lightNum].position, light.position[0], light.position[1], light.position[2], light.position[3]);
+    gl.uniform3f(shaderVars.lights[lightNum].diffuse,  light.diffuse[0],  light.diffuse[1],  light.diffuse[2]);
+    gl.uniform3f(shaderVars.lights[lightNum].specular, light.specular[0], light.specular[1], light.specular[2]);
+}
+
+function prepareShaderMaterialData(shaderVars, material) {
+    gl.uniform3f(shaderVars.material.ambient, material.ambient[0], material.ambient[1], material.ambient[2]);
+    gl.uniform3f(shaderVars.material.diffuse, material.diffuse[0], material.diffuse[1], material.diffuse[2]);
+    gl.uniform3f(shaderVars.material.specular, material.specular[0], material.specular[1], material.specular[2]);
+    gl.uniform1f(shaderVars.material.shininess, material.shininess);
+}
+
+function prepareLightingShaderForModel(shaderVars, modelViewMatrix, viewMatrix, normalMatrix, model, globalAmbient, lights) {
+    gl.useProgram(shaderVars.program);
+
+    gl.uniformMatrix4fv(shaderVars.modelViewMatrix, false, flatten(modelViewMatrix));
+    gl.uniformMatrix4fv(shaderVars.viewMatrix, false, flatten(viewMatrix));
+    gl.uniformMatrix3fv(shaderVars.normalMatrix, false, flatten(normalMatrix));
+
+    gl.uniform3f(shaderVars.globalAmbient, globalAmbient[0], globalAmbient[1], globalAmbient[2]);
+    var lightNum = 0;
+    for (; lightNum < lights.length && lightNum < MAX_NUM_LIGHTS; lightNum++) {
+        prepareShaderLightData(shaderVars, lightNum, lights[lightNum]);
+    }
+    for (; lightNum < MAX_NUM_LIGHTS; lightNum++) {
+        // settings remaining lights to disabled
+        prepareShaderLightData(shaderVars, lightNum, { enabled: false, position: vec4(0,0,0,0), diffuse: vec3(0,0,0), specular: vec3(0,0,0)});
+    }
+
+    prepareShaderMaterialData(shaderVars, defaultMaterial);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexPosBuffer.id);
+    gl.enableVertexAttribArray(shaderVars.vPosition);
+    gl.vertexAttribPointer(shaderVars.vPosition, model.vertexPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexNormalBuffer.id);
+    gl.enableVertexAttribArray(shaderVars.vNormal);
+    gl.vertexAttribPointer(shaderVars.vNormal, model.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+}
+
+function drawModelItems(model, renderMode) {
     if (isValid(model.faceIndexBuffer)) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.faceIndexBuffer.id);
         gl.drawElements(renderMode, model.faceIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
@@ -254,48 +427,89 @@ function drawModelItems(shaderVars, model, renderMode) {
     }
 }
 
-function drawModelWireframe(shaderVars, model) {
+function drawModelWireframe(model) {
     if (isValid(model.faceIndexBuffer)) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.faceIndexBuffer.id);
         for (var i = 0; i < model.faceIndexBuffer.numItems / 3; i++) {
             gl.drawElements(gl.LINE_LOOP, 3, gl.UNSIGNED_SHORT, i * 3 * model.faceIndexBuffer.itemSize);
         }
     } else {
-        for (var i = 0; i < model.vertexPosBuffer.numItems / 3; i++) {
+//        for (var i = 0; i < model.vertexPosBuffer.numItems / 3 - 24; i++) {
+//        for (var i = 0; i < model.vertexPosBuffer.numItems / 3; i++) {
+        var numVertices = model.vertexPosBuffer.numItems / model.vertexPosBuffer.itemSize / 3;
+        for (var i = 0; i < numVertices; i++) {
             gl.drawArrays(gl.LINE_LOOP, i*3, 3);
         }
     }
 }
-
-
+1
 function initShaderVars(vertexShader, fragmentShader) {
     console.log("initShaderVars: vertexShader=" + vertexShader + ", framentShader=" + fragmentShader);
     var program = initShaders(gl, vertexShader, fragmentShader);
     gl.useProgram(program);
 
     var shaderVars =  {
-        programId: program,
-        vPosition : gl.getAttribLocation(program, "aPosition"),
-        vColor : gl.getAttribLocation(program, "aColor"),
+        program: program,
+        vPosition : gl.getAttribLocation(program, "vPosition"),
+//        vColor : gl.getAttribLocation(program, "vColor"),
 
         projectionMatrix : gl.getUniformLocation(program, "uProjectionMatrix"),
         modelViewMatrix : gl.getUniformLocation(program, "uModelViewMatrix"),
-//        normalMatrix : gl.getUniformLocation(program, "uNormalMatrix")
 
         uForceColor : gl.getUniformLocation(program, "uForceColor"),
-        uColor : gl.getUniformLocation(program, "uColor"),
-
-        uMaterial : gl.getUniformLocation(program, "uMaterial"),
-        uLightingModel : gl.getUniformLocation(program, "uLightingModel"),
-        uLights : gl.getUniformLocation(program, "uLights")
+        uColor : gl.getUniformLocation(program, "uColor")
     };
 
-    gl.enableVertexAttribArray(shaderVars.vPosition);
+//    gl.enableVertexAttribArray(shaderVars.vPosition);
 //    gl.enableVertexAttribArray(shaderVars.vColor);
 
     console.log("shaderVars: " + JSON.stringify(shaderVars));
     return shaderVars;
 }
+
+function initLightingShaderVars(vertexShader, fragmentShader) {
+    console.log("initLightingShaderVars: vertexShader=" + vertexShader + ", framentShader=" + fragmentShader);
+    var program = initShaders(gl, vertexShader, fragmentShader);
+    gl.useProgram(program);
+
+    var shaderVars =  {
+        program: program,
+        vPosition : gl.getAttribLocation(program, "vPosition"),
+        vNormal : gl.getAttribLocation(program, "vNormal"),
+
+        projectionMatrix : gl.getUniformLocation(program, "uProjectionMatrix"),
+        modelViewMatrix : gl.getUniformLocation(program, "uModelViewMatrix"),
+        viewMatrix : gl.getUniformLocation(program, "uViewMatrix"),
+        normalMatrix : gl.getUniformLocation(program, "uNormalMatrix"),
+
+        material : {
+            ambient: gl.getUniformLocation(program, "uMaterial.ambient"),
+            diffuse: gl.getUniformLocation(program, "uMaterial.diffuse"),
+            specular: gl.getUniformLocation(program, "uMaterial.specular"),
+            shininess: gl.getUniformLocation(program, "uMaterial.shininess"),
+        },
+
+        lights : gl.getUniformLocation(program, "uLights"),
+        globalAmbient : gl.getUniformLocation(program, "uGlobalAmbient")
+    };
+
+    shaderVars.lights = [];
+    for (var i = 0; i < MAX_NUM_LIGHTS; i++) {
+        shaderVars.lights.push({
+            enabled: gl.getUniformLocation(program, "uLights[" + i + "].enabled"),
+            position: gl.getUniformLocation(program, "uLights[" + i + "].position"),
+            diffuse: gl.getUniformLocation(program, "uLights[" + i + "].diffuse"),
+            specular: gl.getUniformLocation(program, "uLights[" + i + "].specular")
+        });
+    }
+
+//    gl.enableVertexAttribArray(shaderVars.vPosition);
+//    gl.enableVertexAttribArray(shaderVars.vNormal);
+
+    console.log("shaderVars: " + JSON.stringify(shaderVars));
+    return shaderVars;
+}
+
 
 function modelSelector() {
     return modelInstances[selectedModelName];
@@ -314,7 +528,6 @@ function linkGUIModelProperty(widgetId, selectorFunc, property, index, conversio
             changing = true;
 
             origOnInput();
-//            var model = modelInstances[selectedModelName];
             var model = selectorFunc();
             if (model != null) {
                 var value = conversion != null ? conversion(widget.value) : widget.value;
@@ -342,18 +555,32 @@ function installGuiHandlers(shaderVars) {
     }
     showWireframe = showWireframeCheckbox.checked;
 
+    var drawNormalsCheckbox = document.getElementById("drawNormalsCheckbox");
+    drawNormalsCheckbox.onclick = function() {
+        drawNormals = drawNormalsCheckbox.checked;
+        window.requestAnimFrame(renderFunc);
+    }
+    drawNormals = drawNormalsCheckbox.checked;
+
     // camera position
     var camXPosSlider = linkGUIModelProperty("camXPosSlider", cameraSelector, "eye", 0);
     var camYPosSlider = linkGUIModelProperty("camYPosSlider", cameraSelector, "eye", 1);
     var camZPosSlider = linkGUIModelProperty("camZPosSlider", cameraSelector, "eye", 2);
     selectedCamera.eye = vec3(camXPosSlider.value, camYPosSlider.value, camZPosSlider.value);
 
-    var lightingModelChooser = document.getElementById("lightingModelChooser");
-    lightingModelChooser.onchange = function() {
-        useLighting = lightingModelChooser.value == "lighting";
+    var enableLightingCheckbox = document.getElementById("enableLightingCheckbox");
+    enableLightingCheckbox.onclick = function() {
+        useLighting = enableLightingCheckbox.checked;
         window.requestAnimFrame(renderFunc);
-    };
-    useLighting = lightingModelChooser.value == "lighting";
+    }
+    useLighting = enableLightingCheckbox.checked;
+//
+//    var lightingModelChooser = document.getElementById("lightingModelChooser");
+//    lightingModelChooser.onchange = function() {
+//        useLighting = lightingModelChooser.value == "lighting";
+//        window.requestAnimFrame(renderFunc);
+//    };
+//    useLighting = lightingModelChooser.value == "lighting";
 
     // position
 
@@ -406,16 +633,9 @@ function installGuiHandlers(shaderVars) {
     modelPropertyWidgets.push(scaleResetButton);
 
     selModelChooser = document.getElementById("selModelChooser");
-//    var origSelModelChooserOnChange = selModelChooser.onchange;
     selModelChooser.onchange = function() {
-//        origSelModelChooserOnChange();
         selectedModelName = selModelChooser.value;
         var selectedModel = modelInstances[selectedModelName];
-
-        if (blinkTimer != null) {
-            clearInterval(blinkTimer);
-            blinkTimer = null;
-        }
 
         if (selectedModel != null) {
             xPosText.value = selectedModel.position[0]; xPosText.oninput();
@@ -429,12 +649,6 @@ function installGuiHandlers(shaderVars) {
             xScaleText.value= selectedModel.scale[0]; xScaleText.oninput();
             yScaleText.value= selectedModel.scale[1]; yScaleText.oninput();
             zScaleText.value= selectedModel.scale[2]; zScaleText.oninput();
-
-            blinkTimer = setInterval(function () {
-                    blink = !blink;
-                    window.requestAnimFrame(renderFunc);
-                }, 500);
-
         }
 
         updateModelPropertyWidgets();
@@ -457,8 +671,6 @@ function installGuiHandlers(shaderVars) {
 
         window.requestAnimFrame(renderFunc);
     }
-
-
 }
 
 function updateModelPropertyWidgets() {
@@ -469,11 +681,12 @@ function updateModelPropertyWidgets() {
 }
 
 function installSupportedModels() {
-    addModelType(CubeModel);
+    addModelType(generateNormals(CubeModel));
+//    addModelType(generateNormals(expandModel(CubeModel)));
 //    addModelType(TetraHedronModel);
 //    addModelType(TetraHedronModel2);
-    addModelType(TetraHedronModel3);
-    addModelType(OctahedronModel);
+    addModelType(generateNormals(expandModel(TetraHedronModel3)));
+    addModelType(generateNormals(expandModel(OctahedronModel)));
     addModelType(generateConeModel(10, 0.5, 2));
     addModelType(generateCylinderModel(10, 0.5, 2));
     addModelType(generateSphereModel3(16, 1));
@@ -498,14 +711,22 @@ function addModelInstance(modelInstance) {
 
 function initBuffersForModel(shaderVars, model, modelInstance) {
     var vertexBufId = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufId)
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufId);
     var vertices = flatten(model.vertices);
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
     gl.vertexAttribPointer(shaderVars.vPosition, 3, gl.FLOAT, false, 0, 0);
-//    gl.enableVertexAttribArray(shaderVars.vPosition);
+    gl.enableVertexAttribArray(shaderVars.vPosition);
 
     modelInstance.vertexPosBuffer = { id: vertexBufId, itemSize: 3, numItems: vertices.length };
+
+    if (isValid(model.normals)) {
+        var normalBufId = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBufId);
+        var normals = flatten(model.normals);
+        gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(shaderVars.vNormal);
+        modelInstance.vertexNormalBuffer = { id: normalBufId, itemSize: 3, numItems: normals.length };
+    }
 
     if (isValid(model.faces)) {
         var indexBufId = gl.createBuffer();
@@ -529,7 +750,9 @@ function createModelInstance(shaderVars, model) {
 
         vertexPosBuffer: null,
 //        vertexColBuffer: {},
-        faceIndexBuffer: null
+        faceIndexBuffer: null,
+
+        model: model
     };
 
     initBuffersForModel(shaderVars, model, modelInstance);
@@ -545,8 +768,9 @@ function generateConeModel(numPoints, radius, height) {
         faces: []
     };
 
-    generateConeFan(numPoints, radius, 0, height, model.vertices, model.faces);
-    generateConeFan(numPoints, radius, 0, 0, model.vertices, model.faces, model.vertices.length - numPoints);
+//    generateConeFan(numPoints, radius, 0, height, model.vertices, model.faces);
+    generateCylinderStrip(numPoints, radius, 0, 0, height, model.vertices, model.faces);
+    generateConeFan(numPoints, radius, 0, 0, model.vertices, model.faces);//, model.vertices.length - numPoints);
 
     return model;
 }
@@ -589,6 +813,7 @@ function generateIcoSphereModel(numSubdivisions, radius) {
         pushArray(resultVertices, tmpVertices);
     }
 
+    var normals = [];
     // correct all vertices to have radius - push them away/towards center to generate actual sphere
     for (var i = 0; i < resultVertices.length; i++) {
         var v = resultVertices[i];
@@ -597,6 +822,8 @@ function generateIcoSphereModel(numSubdivisions, radius) {
 
         var v1 = scale(k, v);
         resultVertices[i] = v1;
+
+        normals.push(normalize(v1));
     }
 
     return {
@@ -638,7 +865,7 @@ function generateSphereModel3(numSteps, radius) {
 }
 
 function genCircleXZVertices(radius, yPos, numPoints, vertices) {
-    console.log("--genCircleXZVertices: radius=" + radius + ", yPos=" + yPos + ", numPoints=" + numPoints + ", vertices.len=" + vertices.length);
+//    console.log("--genCircleXZVertices: radius=" + radius + ", yPos=" + yPos + ", numPoints=" + numPoints + ", vertices.len=" + vertices.length);
     var step = 2 * Math.PI / numPoints;
     for (var i = 0; i < numPoints ; i++) {
         var theta = i * step;
@@ -676,7 +903,7 @@ function generateStrip(numSteps, line1VertexGenerator, line2VertexGenerator, ver
     var row1StartIdx = line1VertexGenerator(numSteps, vertices);
     var row2StartIdx = line2VertexGenerator(numSteps, vertices);
 
-    console.log("generateStrip: row1StartIdx=" + row1StartIdx + ", row2StartIdx=" + row2StartIdx);
+//    console.log("generateStrip: row1StartIdx=" + row1StartIdx + ", row2StartIdx=" + row2StartIdx);
 
     for (var i = 0; i < numSteps - 1; i++) {
         faces.push(vec3(row1StartIdx + i, row1StartIdx + i + 1, row2StartIdx + i));
@@ -690,7 +917,7 @@ function generateStrip(numSteps, line1VertexGenerator, line2VertexGenerator, ver
 }
 
 function generateConeFan(numSteps, radius, yPos, height, vertices, faces, reuseTipVertexIdx, reuseBaseVerticesIdx) {
-    console.log("generateConeFan: numSteps=" + numSteps + ", radius=" + radius + ", yPos=" + yPos + ", height=" + height);
+//    console.log("generateConeFan: numSteps=" + numSteps + ", radius=" + radius + ", yPos=" + yPos + ", height=" + height);
     function reuseVertexStartIdx(startIdx, vertices) {
         return startIdx;
     }
@@ -744,14 +971,14 @@ function generateGrid(N, stepX, stepZ, y) {
     var z = minZ
 
     for (var i = 0; i < N; i++) {
-        gridPoints.push(minX, y, z,  maxX, y, z);
-        gridPoints.push(x, y, minZ,  x, y, maxZ);
+        gridPoints.push(vec3(minX, y, z),  vec3(maxX, y, z));
+        gridPoints.push(vec3(x, y, minZ),  vec3(x, y, maxZ));
         x += stepX
         z += stepZ
     }
 
-    gridPoints.push(minX, y, maxZ,  maxX, y, maxZ);
-    gridPoints.push(maxX, y, minZ,  maxX, y, maxZ);
+    gridPoints.push(vec3(minX, y, maxZ),  vec3(maxX, y, maxZ));
+    gridPoints.push(vec3(maxX, y, minZ),  vec3(maxX, y, maxZ));
 
     return gridPoints;
 }
@@ -762,16 +989,17 @@ function generateBasePlane(shaderVars, N, stepX, stepZ, y) {
         vertices : generateGrid(N, stepX, stepZ, y),
 
         color : planeGridColor,
-        vertexBuffer : null
+        vertexPosBuffer : null
     }
 
     var vertexBufId = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBufId)
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(basePlaneGrid.vertices), gl.STATIC_DRAW);
+    var vertices = flatten(basePlaneGrid.vertices);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
     gl.vertexAttribPointer(shaderVars.vPosition, 3, gl.FLOAT, false, 0, 0);
-
-    basePlaneGrid.vertexPosBuffer = { id: vertexBufId, itemSize: 3, numItems: basePlaneGrid.vertices.length };
+    gl.enableVertexAttribArray(shaderVars.vPosition);
+    basePlaneGrid.vertexPosBuffer = { id: vertexBufId, itemSize: 3, numItems: vertices.length };
 //    basePlaneGrid.vertexPosBuffer = new BufferData(vertexBufId, 3, basePlaneGrid.vertices.length, gl.LINES)
 
     return basePlaneGrid;
@@ -929,4 +1157,217 @@ function divideTriangle(a, b, c, count, vertices) {
         divideTriangle( b, bc, ab, count - 1, vertices);
         divideTriangle(ab, ac, bc, count - 1, vertices);
     }
+}
+
+function expandModel(model, useFaceIndexing) {
+    var vertices = [];
+    var faces = [];
+    for (var i = 0; i < model.faces.length; i++) {
+        if (useFaceIndexing) {
+            faces.push(vec3(vertices.length, vertices.length+1, vertices.length+2));
+        }
+        var face = model.faces[i];
+        vertices.push(model.vertices[face[0]]);
+        vertices.push(model.vertices[face[1]]);
+        vertices.push(model.vertices[face[2]]);
+    }
+
+    var expandedModel = {
+        name: model.name,
+        vertices: vertices
+    };
+    if (useFaceIndexing) {
+        expandedModel.faces = faces;
+    }
+
+    console.log("Expanded model: {"
+                    + "name: " + expandedModel.name + ", "
+                    + "vertices: len=" + expandedModel.vertices.length + ", "
+                    + "faces: " + expandedModel.faces
+                    + " }");
+
+    return expandedModel;
+}
+
+function generateNormals2(model) {
+    var normals = [];
+    if (isValid(model.faces)) {
+        for (var i = 0; i < model.faces.length; i++) {
+            var face = model.faces[i];
+            normals.push(calcNormal(model.vertices[face[0]], model.vertices[face[1]], model.vertices[face[2]]));
+            normals.push(calcNormal(model.vertices[face[0]], model.vertices[face[1]], model.vertices[face[2]]));
+            normals.push(calcNormal(model.vertices[face[0]], model.vertices[face[1]], model.vertices[face[2]]));
+        }
+    } else {
+        for (var i = 0; i < model.vertices.length; i += 3) {
+            normals.push(calcNormal(model.vertices[i], model.vertices[i+1], model.vertices[i+2]));
+            normals.push(calcNormal(model.vertices[i], model.vertices[i+1], model.vertices[i+2]));
+            normals.push(calcNormal(model.vertices[i], model.vertices[i+1], model.vertices[i+2]));
+        }
+    }
+
+    model.normals = normals;
+    return model;
+}
+
+function generateNormals(model) {
+    var normals = [];
+
+    if (isValid(model.faces)) {
+        var normals = new Array(model.vertices.length);
+        for (var i = 0; i < model.faces.length; i++) {
+            var face = model.faces[i];
+            normals[face[0]] = calcNormal(model.vertices[face[0]], model.vertices[face[1]], model.vertices[face[2]]);
+            normals[face[1]] = calcNormal(model.vertices[face[0]], model.vertices[face[1]], model.vertices[face[2]]);
+            normals[face[2]] = calcNormal(model.vertices[face[0]], model.vertices[face[1]], model.vertices[face[2]]);
+        }
+    } else {
+        for (var i = 0; i < model.vertices.length; i += 3) {
+            normals.push(calcNormal(model.vertices[i], model.vertices[i+1], model.vertices[i+2]));
+            normals.push(calcNormal(model.vertices[i], model.vertices[i+1], model.vertices[i+2]));
+            normals.push(calcNormal(model.vertices[i], model.vertices[i+1], model.vertices[i+2]));
+        }
+    }
+    model.normals = normals;
+    return model;
+}
+
+function calcNormal(v0, v1, v2) {
+    var u = subtract(v1, v0);
+    var v = subtract(v2, v0);
+
+    return normalize(vec3(u[1] * v[2] - u[2] * v[1],
+                          u[2] * v[0] - u[0] * v[2],
+                          u[0] * v[1] - u[1] * v[0]));
+}
+
+/*
+var CubeModel = {
+    name : "Cube",
+    vertices : [
+        vec3(-0.5, -0.5, -0.5), // 0
+        vec3( 0.5, -0.5, -0.5), // 1
+        vec3( 0.5,  0.5, -0.5), // 2
+        vec3(-0.5,  0.5, -0.5), // 3
+
+        vec3(-0.5, -0.5,  0.5), // 4
+        vec3( 0.5, -0.5,  0.5), // 5
+        vec3( 0.5,  0.5,  0.5), // 6
+        vec3(-0.5,  0.5,  0.5), // 7
+    ],
+    faces : [
+        vec3(0, 1, 2),  vec3(0, 2, 3), // front
+        vec3(2, 3, 6),  vec3(3, 6, 7), // top
+        vec3(0, 1, 4),  vec3(1, 4, 5), // bottom
+        vec3(0, 3, 4),  vec3(3, 4, 7), // right
+        vec3(1, 2, 6),  vec3(1, 6, 5), // left
+        vec3(4, 5, 6),  vec3(4, 6, 7), // back
+    ]
+}
+*/
+
+//function inverseMatrix(M) {
+//    var det = M[0][0]*M[1][1]*M[2][2]*M[3][3] + M[0][0]*M[2][1]*M[3][2]*M[1][3] + M[0][0]*M[3][1]*M[1][2]*M[2][3]
+//            + M[1][0]*M[0][1]*M[3][2]*M[2][3] + M[1][0]*M[2][1]*M[0][3]*M[3][3] + M[1][0]*M[3][1]*M[2][2]*M[0][3]
+//            + M[2][0]*M[0][1]*M[1][2]*M[3][3] + M[2][0]*M[1][1]*M[3][2]*M[0][3] + M[2][0]*M[3][1]*M[0][2]*M[1][3]
+//            + M[3][0]*M[0][1]*M[2][2]*M[1][3] + M[3][0]*M[1][1]*M[0][2]*M[2][3] + M[3][0]*M[2][1]*M[1][2]*M[0][3]
+//
+//            - M[0][0]*M[1][1]*M[3][2]*M[2][3] - M[0][0]*M[2][1]*M[1][2]*M[3][3] - M[0][0]*M[3][1]*M[2][2]*M[1][3]
+//            - M[1][0]*M[0][1]*M[2][2]*M[3][3] - M[1][0]*M[2][1]*M[3][2]*M[0][3] - M[1][0]*M[3][1]*M[0][2]*M[2][3]
+//            - M[2][0]*M[0][1]*M[3][2]*M[1][3] - M[2][0]*M[1][1]*M[0][2]*M[3][3] - M[2][0]*M[3][1]*M[1][2]*M[0][3]
+//            - M[3][0]*M[0][1]*M[1][2]*M[2][3] - M[3][0]*M[1][1]*M[2][2]*M[0][0] - M[3][0]*M[2][1]*M[0][2]*M[1][3]
+//
+//    if (det == 0) {
+//        return null;
+//    }
+//
+////    var B = mat4(M[1][1]*M[2][2]*M[3][3] + M[])
+//
+//
+//}
+
+function detMat3(M) {
+    return M[0][0]*M[1][1]*M[2][2] + M[0][1]*M[1][2]*M[2][0] + M[0][2]*M[1][0]*M[2][1] -
+           M[0][0]*M[1][2]*M[2][1] - M[0][2]*M[1][1]*M[2][0] - M[0][1]*M[1][0]*M[2][2];
+}
+
+function inverseMat3(M) {
+    var Mi = mat3(M[1][1]*M[2][2] - M[2][1]*M[1][2],    M[2][1]*M[0][2] - M[0][1]*M[2][2],    M[0][1]*M[1][2] - M[1][1]*M[0][2],
+                  M[2][0]*M[1][2] - M[1][0]*M[2][2],    M[0][0]*M[2][2] - M[2][0]*M[0][2],    M[1][0]*M[0][2] - M[0][0]*M[1][2],
+                  M[1][0]*M[2][1] - M[2][0]*M[1][1],    M[2][0]*M[0][1] - M[0][0]*M[2][1],    M[0][0]*M[1][1] - M[1][0]*M[0][1]);
+    var detM = detMat3(M);
+    Mi = scaleMat(1/detM, Mi);
+    return Mi;
+}
+
+function mkMatBySize(M) {
+    switch(M.length) {
+        case 2: return mat2();
+        case 3: return mat3();
+        case 4: return mat4();
+        default:
+            throw "Invalid matrix size: " + len;
+    }}
+
+function transpose(M) {
+    var len = M.length;
+    var Mt = mkMatBySize(M);
+
+    for (var i = 0; i < len; i++) {
+        for (var j = 0; j < len; j++) {
+            Mt[j][i] = M[i][j];
+        }
+    }
+
+    return Mt;
+}
+
+function scaleMat(a, M) {
+    var Ms = mkMatBySize(M);
+    for (var i = 0; i < M.length; i++) {
+        for (var j = 0; j < M.length; j++) {
+            Ms[i][j] = a * M[i][j];
+        }
+    }
+    return Ms;
+}
+
+function boundingBox(vertices, M, offset) {
+    var v = transform(vec4(vertices[0][0], vertices[0][1], vertices[0][2], 1), M);
+    var min = vec3(v[0], v[1], v[2]);
+    var max = vec3(v[0], v[1], v[2]);
+    for (var i = 1; i < vertices.length; i++) {
+        v = transform(vec4(vertices[i][0], vertices[i][1], vertices[i][2], 1), M);
+
+//        console.log("v=" + JSON.stringify(v) + ", min=" + JSON.stringify(min) + ", max=" + JSON.stringify(max));
+
+        for (var j = 0; j < 3; j++) {
+            if (v[j] < min[j]) {
+                min[j] = v[j];
+            }
+            if (v[j] > max[j]) {
+                max[j] = v[j];
+            }
+        }
+    }
+
+    if (isValid(offset)) {
+        min = subtract(min, vec3(offset, offset, offset));
+        max = add(max, vec3(offset, offset, offset));
+    }
+
+    return {
+        min: min,
+        max: max
+    };
+}
+
+function transform(v, M) {
+    var v2 = vec4(0,0,0,0);
+    for (var i = 0; i < 4; i++) {
+        for (var j = 0; j < 4; j++) {
+            v2[i] += v[j]*M[i][j];
+        }
+    }
+    return v2;
 }
