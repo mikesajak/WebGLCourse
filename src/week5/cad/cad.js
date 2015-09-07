@@ -253,7 +253,7 @@ function initGL() {
 
     workBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(100 * sizeof['vec3']), gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(200 * sizeof['vec3']), gl.DYNAMIC_DRAW);
 
 
     renderFunc = function() {
@@ -304,49 +304,79 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
 
         if (model.name == selectedModelName) {
             // todo: create and update bounding box data only on selection change and/or selected model/camera changes
-            var aabb = boundingBox(model.model.vertices, mat4(), 0.1);
-            var aabbVertices = [
-                // front
-                vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.min[1], aabb.min[2]),
-                vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.max[1], aabb.min[2]),
-                vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.max[1], aabb.min[2]),
-                vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.min[1], aabb.min[2]),
-
-                // back
-                vec3(aabb.min[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.min[1], aabb.max[2]),
-                vec3(aabb.max[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.max[1], aabb.max[2]),
-                vec3(aabb.max[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.max[1], aabb.max[2]),
-                vec3(aabb.min[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.min[1], aabb.max[2]),
-
-                // links between front and back
-                vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.min[0], aabb.min[1], aabb.max[2]),
-                vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.min[1], aabb.max[2]),
-                vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.max[0], aabb.max[1], aabb.max[2]),
-                vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.max[1], aabb.max[2]),
-            ];
-            gl.useProgram(simpleShaderVars.program);
-            gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
-            for (var i = 0; i < aabbVertices.length; i++) {
-                gl.bufferSubData(gl.ARRAY_BUFFER, i* sizeof['vec3'], flatten(aabbVertices[i]));
-            }
-
-            gl.vertexAttribPointer(simpleShaderVars.vPosition, 3, gl.FLOAT, false, 0, 0);
-            gl.enableVertexAttribArray(simpleShaderVars.vPosition);
-            var aabbModel = {
-                name: "aabb",
-                vertices: aabbVertices,
-                vertexPosBuffer: {id: workBuffer, itemSize: 3, numItems: aabbVertices.length/3},
-
-                color: vec4(1,0,0,0.5)
-            };
+            var aabbModel = createAABBForModel(simpleShaderVars, model);
             prepareFlatShaderForModel(simpleShaderVars, modelViewMatrix, aabbModel);
 
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
             gl.enable(gl.BLEND);
-            gl.drawArrays(gl.LINES, 0, 24);
+            gl.drawArrays(gl.LINES, 0, aabbModel.vertices.length);
             gl.disable(gl.BLEND);
         }
     }
+}
+
+function createAABBForModel(shaderVars, model) {
+    var aabb = boundingBox(model.model.vertices, mat4(), 0.1);
+    var segLen = 0.3;
+    var aabbVertices = [
+        // front
+        //vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.min[1], aabb.min[2]),
+        vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.min[0]+segLen, aabb.min[1], aabb.min[2]),
+        vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.min[0], aabb.min[1]+segLen, aabb.min[2]),
+        vec3(aabb.min[0], aabb.min[1], aabb.min[2]),    vec3(aabb.min[0], aabb.min[1], aabb.min[2]+segLen),
+
+        //vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.max[1], aabb.min[2]),
+        vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0]-segLen, aabb.min[1], aabb.min[2]),
+        vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.min[1]+segLen, aabb.min[2]),
+        vec3(aabb.max[0], aabb.min[1], aabb.min[2]),    vec3(aabb.max[0], aabb.min[1], aabb.min[2]+segLen),
+
+        //vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.max[1], aabb.min[2]),
+        vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.max[0]-segLen, aabb.max[1], aabb.min[2]),
+        vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.max[0], aabb.max[1]-segLen, aabb.min[2]),
+        vec3(aabb.max[0], aabb.max[1], aabb.min[2]),    vec3(aabb.max[0], aabb.max[1], aabb.min[2]+segLen),
+
+        //vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.min[1], aabb.min[2]),
+        vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0]+segLen, aabb.max[1], aabb.min[2]),
+        vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.max[1]-segLen, aabb.min[2]),
+        vec3(aabb.min[0], aabb.max[1], aabb.min[2]),    vec3(aabb.min[0], aabb.max[1], aabb.min[2]+segLen),
+
+        // back
+        //vec3(aabb.min[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.min[1], aabb.max[2]),
+        vec3(aabb.min[0], aabb.min[1], aabb.max[2]),    vec3(aabb.min[0]+segLen, aabb.min[1], aabb.max[2]),
+        vec3(aabb.min[0], aabb.min[1], aabb.max[2]),    vec3(aabb.min[0], aabb.min[1]+segLen, aabb.max[2]),
+        vec3(aabb.min[0], aabb.min[1], aabb.max[2]),    vec3(aabb.min[0], aabb.min[1], aabb.max[2]-segLen),
+
+        //vec3(aabb.max[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.max[1], aabb.max[2]),
+        vec3(aabb.max[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0]-segLen, aabb.min[1], aabb.max[2]),
+        vec3(aabb.max[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.min[1]+segLen, aabb.max[2]),
+        vec3(aabb.max[0], aabb.min[1], aabb.max[2]),    vec3(aabb.max[0], aabb.min[1], aabb.max[2]-segLen),
+
+        //vec3(aabb.max[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.max[1], aabb.max[2]),
+        vec3(aabb.max[0], aabb.max[1], aabb.max[2]),    vec3(aabb.max[0]-segLen, aabb.max[1], aabb.max[2]),
+        vec3(aabb.max[0], aabb.max[1], aabb.max[2]),    vec3(aabb.max[0], aabb.max[1]-segLen, aabb.max[2]),
+        vec3(aabb.max[0], aabb.max[1], aabb.max[2]),    vec3(aabb.max[0], aabb.max[1], aabb.max[2]-segLen),
+
+        //vec3(aabb.min[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.min[1], aabb.max[2]),
+        vec3(aabb.min[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0]+segLen, aabb.max[1], aabb.max[2]),
+        vec3(aabb.min[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.max[1]-segLen, aabb.max[2]),
+        vec3(aabb.min[0], aabb.max[1], aabb.max[2]),    vec3(aabb.min[0], aabb.max[1], aabb.max[2]-segLen)
+    ];
+
+    gl.useProgram(shaderVars.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
+    for (var i = 0; i < aabbVertices.length; i++) {
+        gl.bufferSubData(gl.ARRAY_BUFFER, i* sizeof['vec3'], flatten(aabbVertices[i]));
+    }
+
+    gl.vertexAttribPointer(shaderVars.vPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(shaderVars.vPosition);
+    return {
+        name: "aabb",
+        vertices: aabbVertices,
+        vertexPosBuffer: {id: workBuffer, itemSize: 3, numItems: aabbVertices.length},
+
+        color: vec4(1, 0, 0, 0.7)
+    };
 }
 
 function calcNormalMatrix(modelViewMatrix) {
@@ -402,8 +432,8 @@ function prepareLightingShaderForModel(shaderVars, modelViewMatrix, viewMatrix, 
     for (; lightNum < lights.length && lightNum < MAX_NUM_LIGHTS; lightNum++) {
         prepareShaderLightData(shaderVars, lightNum, lights[lightNum]);
     }
+    // set remaining lights to disabled
     for (; lightNum < MAX_NUM_LIGHTS; lightNum++) {
-        // settings remaining lights to disabled
         prepareShaderLightData(shaderVars, lightNum, { enabled: false, position: vec4(0,0,0,0), diffuse: vec3(0,0,0), specular: vec3(0,0,0)});
     }
 
@@ -434,15 +464,13 @@ function drawModelWireframe(model) {
             gl.drawElements(gl.LINE_LOOP, 3, gl.UNSIGNED_SHORT, i * 3 * model.faceIndexBuffer.itemSize);
         }
     } else {
-//        for (var i = 0; i < model.vertexPosBuffer.numItems / 3 - 24; i++) {
-//        for (var i = 0; i < model.vertexPosBuffer.numItems / 3; i++) {
         var numVertices = model.vertexPosBuffer.numItems / model.vertexPosBuffer.itemSize / 3;
         for (var i = 0; i < numVertices; i++) {
             gl.drawArrays(gl.LINE_LOOP, i*3, 3);
         }
     }
 }
-1
+
 function initShaderVars(vertexShader, fragmentShader) {
     console.log("initShaderVars: vertexShader=" + vertexShader + ", framentShader=" + fragmentShader);
     var program = initShaders(gl, vertexShader, fragmentShader);
@@ -532,7 +560,7 @@ function linkGUIModelProperty(widgetId, selectorFunc, property, index, conversio
             if (model != null) {
                 var value = conversion != null ? conversion(widget.value) : widget.value;
                 model[property][index] = value;
-                window.requestAnimFrame(renderFunc);;
+                window.requestAnimFrame(renderFunc);
             }
             changing = false;
         }
@@ -632,28 +660,14 @@ function installGuiHandlers(shaderVars) {
     var scaleResetButton = document.getElementById("scaleResetButton");
     modelPropertyWidgets.push(scaleResetButton);
 
+    var selModelHandler = function() {
+        selectedModelName = selModelChooser.value;
+        updateModelPropertyWidgets();
+        window.requestAnimFrame(renderFunc);
+    }
     selModelChooser = document.getElementById("selModelChooser");
     selModelChooser.onchange = function() {
-        selectedModelName = selModelChooser.value;
-        var selectedModel = modelInstances[selectedModelName];
-
-        if (selectedModel != null) {
-            xPosText.value = selectedModel.position[0]; xPosText.oninput();
-            yPosText.value = selectedModel.position[1]; yPosText.oninput();
-            zPosText.value = selectedModel.position[2]; zPosText.oninput();
-
-            xRotText.value = Math.degrees(selectedModel.rotation[0]); xRotText.oninput();
-            yRotText.value = Math.degrees(selectedModel.rotation[1]); yRotText.oninput();
-            zRotText.value = Math.degrees(selectedModel.rotation[2]); zRotText.oninput();
-
-            xScaleText.value= selectedModel.scale[0]; xScaleText.oninput();
-            yScaleText.value= selectedModel.scale[1]; yScaleText.oninput();
-            zScaleText.value= selectedModel.scale[2]; zScaleText.oninput();
-        }
-
-        updateModelPropertyWidgets();
-
-        window.requestAnimFrame(renderFunc);
+        selModelHandler()
     };
 
     updateModelPropertyWidgets();
@@ -669,7 +683,9 @@ function installGuiHandlers(shaderVars) {
         modelInstance.name = modelInstance.name + countProps(modelInstances);
         addModelInstance(modelInstance);
 
-        window.requestAnimFrame(renderFunc);
+        selModelChooser.value = modelInstance.name;
+
+        selModelHandler();
     }
 }
 
@@ -677,6 +693,20 @@ function updateModelPropertyWidgets() {
     for (var i = 0; i < modelPropertyWidgets.length; i++) {
         var selectedModel = modelInstances[selectedModelName];
         modelPropertyWidgets[i].disabled = (selectedModel == null);
+
+        if (selectedModel != null) {
+            xPosSlider.value = xPosText.value = selectedModel.position[0];
+            yPosSlider.value = yPosText.value = selectedModel.position[1];
+            zPosSlider.value = zPosText.value = selectedModel.position[2];
+
+            xRotSlider.value = xRotText.value = Math.degrees(selectedModel.rotation[0]);
+            yRotSlider.value = yRotText.value = Math.degrees(selectedModel.rotation[1]);
+            zRotSlider.value = zRotText.value = Math.degrees(selectedModel.rotation[2]);
+
+            xScaleSlider.value = xScaleText.value= selectedModel.scale[0];
+            yScaleSlider.value = yScaleText.value= selectedModel.scale[1];
+            zScaleSlider.value = zScaleText.value= selectedModel.scale[2];
+        }
     }
 }
 
@@ -1240,51 +1270,6 @@ function calcNormal(v0, v1, v2) {
                           u[2] * v[0] - u[0] * v[2],
                           u[0] * v[1] - u[1] * v[0]));
 }
-
-/*
-var CubeModel = {
-    name : "Cube",
-    vertices : [
-        vec3(-0.5, -0.5, -0.5), // 0
-        vec3( 0.5, -0.5, -0.5), // 1
-        vec3( 0.5,  0.5, -0.5), // 2
-        vec3(-0.5,  0.5, -0.5), // 3
-
-        vec3(-0.5, -0.5,  0.5), // 4
-        vec3( 0.5, -0.5,  0.5), // 5
-        vec3( 0.5,  0.5,  0.5), // 6
-        vec3(-0.5,  0.5,  0.5), // 7
-    ],
-    faces : [
-        vec3(0, 1, 2),  vec3(0, 2, 3), // front
-        vec3(2, 3, 6),  vec3(3, 6, 7), // top
-        vec3(0, 1, 4),  vec3(1, 4, 5), // bottom
-        vec3(0, 3, 4),  vec3(3, 4, 7), // right
-        vec3(1, 2, 6),  vec3(1, 6, 5), // left
-        vec3(4, 5, 6),  vec3(4, 6, 7), // back
-    ]
-}
-*/
-
-//function inverseMatrix(M) {
-//    var det = M[0][0]*M[1][1]*M[2][2]*M[3][3] + M[0][0]*M[2][1]*M[3][2]*M[1][3] + M[0][0]*M[3][1]*M[1][2]*M[2][3]
-//            + M[1][0]*M[0][1]*M[3][2]*M[2][3] + M[1][0]*M[2][1]*M[0][3]*M[3][3] + M[1][0]*M[3][1]*M[2][2]*M[0][3]
-//            + M[2][0]*M[0][1]*M[1][2]*M[3][3] + M[2][0]*M[1][1]*M[3][2]*M[0][3] + M[2][0]*M[3][1]*M[0][2]*M[1][3]
-//            + M[3][0]*M[0][1]*M[2][2]*M[1][3] + M[3][0]*M[1][1]*M[0][2]*M[2][3] + M[3][0]*M[2][1]*M[1][2]*M[0][3]
-//
-//            - M[0][0]*M[1][1]*M[3][2]*M[2][3] - M[0][0]*M[2][1]*M[1][2]*M[3][3] - M[0][0]*M[3][1]*M[2][2]*M[1][3]
-//            - M[1][0]*M[0][1]*M[2][2]*M[3][3] - M[1][0]*M[2][1]*M[3][2]*M[0][3] - M[1][0]*M[3][1]*M[0][2]*M[2][3]
-//            - M[2][0]*M[0][1]*M[3][2]*M[1][3] - M[2][0]*M[1][1]*M[0][2]*M[3][3] - M[2][0]*M[3][1]*M[1][2]*M[0][3]
-//            - M[3][0]*M[0][1]*M[1][2]*M[2][3] - M[3][0]*M[1][1]*M[2][2]*M[0][0] - M[3][0]*M[2][1]*M[0][2]*M[1][3]
-//
-//    if (det == 0) {
-//        return null;
-//    }
-//
-////    var B = mat4(M[1][1]*M[2][2]*M[3][3] + M[])
-//
-//
-//}
 
 function detMat3(M) {
     return M[0][0]*M[1][1]*M[2][2] + M[0][1]*M[1][2]*M[2][0] + M[0][2]*M[1][0]*M[2][1] -

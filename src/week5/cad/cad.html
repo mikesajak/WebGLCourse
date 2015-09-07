@@ -348,13 +348,17 @@ void main()
                 <tr>
                     <td>Rotation</td>
                     <td>
-                        <label for="xRotText">X:</label><input id="xRotText" type="text" size="1" value="0"
-                                                               oninput="copyValue('xRotText', 'xRotSlider')">
-                        <label for="yRotText">Y:</label><input id="yRotText" type="text" size="1" value="0"
-                                                               oninput="copyValue('yRotText', 'yRotSlider')">
-                        <label for="zRotText">Z:</label><input id="zRotText" type="text" size="1" value="0"
-                                                               oninput="copyValue('zRotText', 'zRotSlider')">
+                        <label for="xRotText">X:</label><input id="xRotText" name="xRotText" type="text" size="1" value="0"
+                                                               for="xRotSlider" oninput="xRotSlider.value=xRotText.value"/>
+                                                               <!--oninput="copyValue('xRotText', 'xRotSlider')">-->
+                        <label for="yRotText">Y:</label><input id="yRotText" name="yRotText" type="text" size="1" value="0"
+                                                               for="yRotSlider" oninput="yRotSlider.value=yRotText.value"/>
+                                                               <!--oninput="copyValue('yRotText', 'yRotSlider')">-->
+                        <label for="zRotText">Z:</label><input id="zRotText" name="zRotText" type="text" size="1" value="0"
+                                                               for="zRotSlider" oninput="zRotSlider.value=zRotText.value"/>
+                                                               <!--oninput="copyValue('zRotText', 'zRotSlider')">-->
                         <button id="rotResetButton" onclick="setValue('xRotText',0); setValue('yRotText', 0); setValue('zRotText', 0);">Reset</button>
+                        <!--<button id="rotResetButton" onclick="xRotText.value=0; xRotSlider.value=0; yRotText.value=0; yRotSlider.value=0; zRotText.value=0; zRotSlider.value=0;">Reset</button>-->
                     </td>
                 </tr>
                 <tr>
@@ -362,8 +366,9 @@ void main()
                         <label for="xRotSlider">X</label>
                     </td>
                     <td>
-                        <input id="xRotSlider" type="range" min="-180" max="180" value="0" step="1"
-                               oninput="copyValue('xRotSlider', 'xRotText')"/>
+                        <input id="xRotSlider" name="xRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                                oninput="xRotText.value=xRotSlider.value"/>
+                               <!--oninput="copyValue('xRotSlider', 'xRotText')"/>-->
                     </td>
                 </tr>
                 <tr>
@@ -371,8 +376,9 @@ void main()
                         <label for="yRotSlider">Y</label>
                     </td>
                     <td>
-                        <input id="yRotSlider" type="range" min="-180" max="180" value="0" step="1"
-                               oninput="copyValue('yRotSlider', 'yRotText')"/>
+                        <input id="yRotSlider" name="yRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                               oninput="yRotText.value=yRotSlider.value"/>
+                               <!--oninput="copyValue('yRotSlider', 'yRotText')"/>-->
                     </td>
                 </tr>
                 <tr>
@@ -380,8 +386,9 @@ void main()
                         <label for="zRotSlider">Z</label>
                     </td>
                     <td>
-                        <input id="zRotSlider" type="range" min="-180" max="180" value="0" step="1"
-                               oninput="copyValue('zRotSlider', 'zRotText')"/>
+                        <input id="zRotSlider" name="zRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                               oninput="zRotText.value=zRotSlider.value"/>
+                               <!--oninput="copyValue('zRotSlider', 'zRotText')"/>-->
                     </td>
                 </tr>
 
