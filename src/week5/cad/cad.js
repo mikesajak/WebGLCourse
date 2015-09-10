@@ -129,8 +129,8 @@ var TetraHedronModel3 = {
         vec3( 0, 0,  2/Math.sqrt(3))
     ],
     faces : [
-        vec3(0, 1, 2),
-        vec3(0, 2, 3),
+        vec3(0, 2, 1),
+        vec3(0, 3, 2),
         vec3(0, 1, 3),
         vec3(1, 2, 3)
     ]
@@ -147,10 +147,10 @@ var OctahedronModel = {
         vec3( 0, -1,  0)
     ],
     faces : [
-        vec3(0, 1, 2),
-        vec3(0, 2, 3),
-        vec3(0, 3, 4),
-        vec3(0, 4, 1),
+        vec3(0, 2, 1),
+        vec3(0, 3, 2),
+        vec3(0, 4, 3),
+        vec3(0, 1, 4),
 
         vec3(5, 1, 2),
         vec3(5, 2, 3),
@@ -312,8 +312,34 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
             gl.drawArrays(gl.LINES, 0, aabbModel.vertices.length);
             gl.disable(gl.BLEND);
         }
+
+        if (drawNormals) {
+            // todo: move to function, optimize, etc...
+            var normalsModel = {
+                name: "aabb",
+                vertices: [ vec3(), vec3() ],
+                vertexPosBuffer: {id: workBuffer, itemSize: 3, numItems: 2},
+                color: vec4(1,1,1,1)
+            }
+            for (var i = 0; i < model.model.normals.length; i++) {
+                normalsModel.vertices[0] = model.model.vertices[i];
+                normalsModel.vertices[1] = add(model.model.vertices[i], model.model.normals[i]);
+                gl.useProgram(simpleShaderVars.program);
+                gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
+                for (var j = 0; j < normalsModel.vertices.length; j++) {
+                    gl.bufferSubData(gl.ARRAY_BUFFER, j* sizeof['vec3'], flatten(normalsModel.vertices[j]));
+                }
+
+                gl.vertexAttribPointer(simpleShaderVars.vPosition, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(simpleShaderVars.vPosition);
+
+                prepareFlatShaderForModel(simpleShaderVars, modelViewMatrix, normalsModel);
+                gl.drawArrays(gl.LINES, 0, 2);
+            }
+        }
     }
 }
+
 
 function createAABBForModel(shaderVars, model) {
     var aabb = boundingBox(model.model.vertices, mat4(), 0.1);
