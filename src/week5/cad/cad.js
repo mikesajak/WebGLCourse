@@ -322,8 +322,9 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
                 color: vec4(1,1,1,1)
             }
             for (var i = 0; i < model.model.normals.length; i++) {
+                var normal = scale(0.3, model.model.normals[i]);
                 normalsModel.vertices[0] = model.model.vertices[i];
-                normalsModel.vertices[1] = add(model.model.vertices[i], model.model.normals[i]);
+                normalsModel.vertices[1] = add(model.model.vertices[i], normal);
                 gl.useProgram(simpleShaderVars.program);
                 gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
                 for (var j = 0; j < normalsModel.vertices.length; j++) {
@@ -821,12 +822,30 @@ function generateConeModel(numPoints, radius, height) {
     var model = {
         name: "Cone",
         vertices: [],
-        faces: []
+        faces: [],
+        normals: []
     };
 
 //    generateConeFan(numPoints, radius, 0, height, model.vertices, model.faces);
+    // have to use cylisder strip with top radiun 0 instead of cone fan - because normals at the tip have to be different for every face
     generateCylinderStrip(numPoints, radius, 0, 0, height, model.vertices, model.faces);
+    console.log("--vertices=" + JSON.stringify(model.vertices));
+    var line2Offset = model.vertices.length/2;
+    for (var i = 0; i < model.vertices.length/2; i++) {
+        var p = model.vertices[i];
+        var v = normalize(vec3(p[0], 0, p[2]));
+        var n = vec3(v[0] * height / radius, radius/height, v[2] * height / radius);
+        n = normalize(n);
+        model.normals.push(n);
+    }
+    for (var i = 0; i < model.vertices.length/2; i++) {
+        model.normals.push(model.normals[i]);
+    }
+    var i = model.normals.length;
     generateConeFan(numPoints, radius, 0, 0, model.vertices, model.faces);//, model.vertices.length - numPoints);
+    for (; i < model.vertices.length; i++) {
+        model.normals.push(vec3(0, -1, 0));
+    }
 
     return model;
 }
@@ -836,12 +855,25 @@ function generateCylinderModel(numPoints, radius, height) {
     var model = {
         name: "Cylinder",
         vertices: [],
-        faces: []
+        faces: [],
+        normals: []
     };
 
     generateConeFan(numPoints, radius, 0, 0, model.vertices, model.faces);
-    generateCylinderStrip(numPoints, radius, 0, radius, height, model.vertices, model.faces, model.vertices - numPoints);
-    generateConeFan(numPoints, radius, height, 0, model.vertices, model.faces, -1, model.vertices - numPoints);
+    var i = 0;
+    for (; i < model.vertices.length; i++) {
+        model.normals.push(vec3(0, -1, 0));
+    }
+    // note - for lighting we cannot reuse vertices between caps and side wall, because normals have to be different
+    generateCylinderStrip(numPoints, radius, 0, radius, height, model.vertices, model.faces); //, model.vertices - numPoints);
+    for (; i < model.vertices.length; i++) {
+        var center = vec3(0, model.vertices[i][1], 0);
+        model.normals.push(normalize(subtract(model.vertices[i], center)));
+    }
+    generateConeFan(numPoints, radius, height, 0, model.vertices, model.faces);//, -1, model.vertices - numPoints);
+    for (; i < model.vertices.length; i++) {
+        model.normals.push(vec3(0, 1, 0));
+    }
 
 //    console.log("model.vertices(" + model.vertices.length + ")")
 //    console.log("model.faces(" + model.faces.length + ")=" + JSON.stringify(model.faces));
@@ -873,18 +905,20 @@ function generateIcoSphereModel(numSubdivisions, radius) {
     // correct all vertices to have radius - push them away/towards center to generate actual sphere
     for (var i = 0; i < resultVertices.length; i++) {
         var v = resultVertices[i];
-        var len = Math.sqrt(dot(v, v));
-        var k = radius * (1 / len);
+        var normal = normalize(v);
+//        var len = Math.sqrt(dot(v, v));
+//        var k = radius * (1 / len);
+//        var v1 = scale(k, v);
 
-        var v1 = scale(k, v);
-        resultVertices[i] = v1;
+        resultVertices[i] = scale(radius, normal);
 
-        normals.push(normalize(v1));
+        normals.push(normal);
     }
 
     return {
         name : "Icosphere",
         vertices : resultVertices,
+        normals: normals,
         faces : null // do not use face index buffer
     };
 
@@ -916,6 +950,11 @@ function generateSphereModel3(numSteps, radius) {
     }
 
     generateConeFan(numSteps, firstRadius, -firstY, -radius+firstY, model.vertices, model.faces, -1, model.vertices.length - numSteps);
+
+    model.normals = [];
+    for (var i = 0; i < model.vertices.length; i++) {
+        model.normals.push(normalize(model.vertices[i]));
+    }
 
     return model;
 }
