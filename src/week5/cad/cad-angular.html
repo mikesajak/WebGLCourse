@@ -35,8 +35,6 @@
 
     <script src="../../Common/angular.js"></script>
 
-    <script src="angular-app.js"></script>
-    <!--<script src="cad.js"></script>-->
     <style>
 /* no-gutters Class Rules */
 .row.no-gutters {
@@ -78,12 +76,12 @@
 
 
 
-
+    <script src="angular-app.js"></script>
 
     <script type="text/javascript" src="../../Common/webgl-utils.js"></script>
     <script type="text/javascript" src="../../Common/initShaders.js"></script>
     <script type="text/javascript" src="../../Common/MV.js"></script>
-    <script type="text/javascript" src="cad.js"></script>
+    <script type="text/javascript" src="cad2.js"></script>
 
 <script id="vertex-shader-simple" type="x-shader/x-vertex">
 
@@ -190,6 +188,12 @@ void main()
     <script>
         window.onload = function init() {
             initGL();
+            $(".dropdown-menu li a").on('click', dropdownSelection);
+
+//            $(".dropdown-menu li a").click(function(){
+//                $(this).parents(".dropdown").find('.btn').html($(this).text() + ' <span class="caret"></span>');
+//                $(this).parents(".dropdown").find('.btn').val($(this).data('value'));
+//            });
         }
 
         function copyValue(inputId, outputId) {
@@ -203,6 +207,13 @@ void main()
             var outputElem = document.getElementById(outputId);
             outputElem.value = value;
             outputElem.oninput();
+        }
+
+        function dropdownSelection() {
+//            function(){
+            $(this).parents(".dropdown").find('.btn').html($(this).text() + ' <span class="caret"></span>');
+            $(this).parents(".dropdown").find('.btn').val($(this).data('value'));
+//            });
         }
     </script>
 
@@ -325,13 +336,15 @@ void main()
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="modelTypeChooser" id="modelTypeChooserOptions">
-                            <li><a href="#">Cube</a></li>
-                            <li><a href="#">Tetrahedron</a></li>
-                            <li><a href="#">Octahedron</a></li>
-                            <li><a href="#">Cone</a></li>
-                            <li><a href="#">Cylinder</a></li>
-                            <li><a href="#">Sphere</a></li>
-                            <li><a href="#">Icosphere</a></li>
+                            <li class="dropdown-header">Select model to create</li>
+                            <!--<li><a>Cube</a></li>-->
+                            <!--<li><a>Tetrahedron</a></li>-->
+                            <!--<li><a>Octahedron</a></li>-->
+                            <!--<li><a>Cone</a></li>-->
+                            <!--<li><a>Cylinder</a></li>-->
+                            <!--<li><a>Sphere</a></li>-->
+                            <!--<li><a>Icosphere</a></li>-->
+                            <!--<li class="divider"></li>-->
                         </ul>
                     </div>
                 </p>
