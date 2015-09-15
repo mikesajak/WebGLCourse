@@ -164,9 +164,13 @@ var basePlaneGrid = {
 
     vertexPosBuffer : null
 }
-var showBasePlaneGrid = true;
-var showWireframe = true;
-var drawNormals = false;
+
+var displayOptions = {
+    showBasePlaneGrid: true,
+    showWireframe: true,
+    drawNormals: false,
+    useLighting: true
+};
 
 var renderFunc = null;
 
@@ -176,7 +180,6 @@ var modelInstances = [];
 var selectedModelName = null;
 var selectedCamera = null;
 
-var useLighting = false;
 var selModelChooser = null;
 var modelTypeChooser = null;
 var modelPropertyWidgets = [];
@@ -276,7 +279,7 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
     gl.useProgram(lightingShaderVars.program);
     gl.uniformMatrix4fv(lightingShaderVars.projectionMatrix, false, flatten(camera.projectionMatrix));
 
-    if (showBasePlaneGrid) {
+    if (displayOptions.showBasePlaneGrid) {
         prepareFlatShaderForModel(simpleShaderVars, camera.viewMatrix, basePlaneGrid);
         drawModelItems(basePlaneGrid, gl.LINES);
     }
@@ -288,7 +291,7 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
         var modelViewMatrix = mult(camera.viewMatrix, mkModelMatrix(model));
 
         gl.enable(gl.POLYGON_OFFSET_FILL);
-        if (useLighting) {
+        if (displayOptions.useLighting) {
             var normalMatrix = calcNormalMatrix(modelViewMatrix);
             prepareLightingShaderForModel(lightingShaderVars, modelViewMatrix, camera.viewMatrix, normalMatrix, model, globalAmbient, lights);
         } else {
@@ -297,7 +300,7 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
         drawModelItems(model, gl.TRIANGLES);
         gl.disable(gl.POLYGON_OFFSET_FILL);
 
-        if (showWireframe) {
+        if (displayOptions.showWireframe) {
             prepareFlatShaderForModel(simpleShaderVars, modelViewMatrix, model, wireframeColor);
             drawModelWireframe(model);
         }
@@ -313,7 +316,7 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
             gl.disable(gl.BLEND);
         }
 
-        if (drawNormals) {
+        if (displayOptions.drawNormals) {
             // todo: move to function, optimize, etc...
             var normalsModel = {
                 name: "aabb",
@@ -595,27 +598,54 @@ function linkGUIModelProperty(widgetId, selectorFunc, property, index, conversio
     return widget;
 }
 
+function isActiveClassSet(classStr) {
+    return classStr.search(/(^|\s)active(\s|$)/) == "active";
+}
+
+function linkToggleButonVar(buttonId, variables, variable, repaint) {
+    var button = document.getElementById(buttonId);
+    var oldOnClick = button.onclick;
+    button.onclick = function() {
+        if (isValid(oldOnClick)) {
+            oldOnClick();
+        }
+
+        variables[variable] = isActiveClassSet(button.className);
+
+        if (repaint) {
+            window.requestAnimFrame(renderFunc);
+        }
+    };
+    variables[variable] = isActiveClassSet(button.className);
+}
+
+
 function installGuiHandlers(shaderVars) {
-    var showGridCheckbox = document.getElementById("showGridCheckbox");
-    showGridCheckbox.onclick = function() {
-        showBasePlaneGrid = showGridCheckbox.checked;
-        window.requestAnimFrame(renderFunc);
-    }
-    showBasePlaneGrid = showGridCheckbox.checked;
+//    var showGridCheckbox = document.getElementById("showGridCheckbox");
+//    showGridCheckbox.onclick = function() {
+//        displayOptions.showBasePlaneGrid = showGridCheckbox.checked;
+//        window.requestAnimFrame(renderFunc);
+//    }
+//    displayOptions.showBasePlaneGrid = showGridCheckbox.checked;
 
-    var showWireframeCheckbox = document.getElementById("showWireframeCheckbox");
-    showWireframeCheckbox.onclick = function() {
-        showWireframe = showWireframeCheckbox.checked;
-        window.requestAnimFrame(renderFunc);
-    }
-    showWireframe = showWireframeCheckbox.checked;
 
-    var drawNormalsCheckbox = document.getElementById("drawNormalsCheckbox");
-    drawNormalsCheckbox.onclick = function() {
-        drawNormals = drawNormalsCheckbox.checked;
-        window.requestAnimFrame(renderFunc);
-    }
-    drawNormals = drawNormalsCheckbox.checked;
+//    var showWireframeCheckbox = document.getElementById("showWireframeCheckbox");
+//    showWireframeCheckbox.onclick = function() {
+//        showWireframe = showWireframeCheckbox.checked;
+//        window.requestAnimFrame(renderFunc);
+//    }
+//    showWireframe = showWireframeCheckbox.checked;
+
+//    var drawNormalsCheckbox = document.getElementById("drawNormalsCheckbox");
+//    drawNormalsCheckbox.onclick = function() {
+//        drawNormals = drawNormalsCheckbox.checked;
+//        window.requestAnimFrame(renderFunc);
+//    }
+//    drawNormals = drawNormalsCheckbox.checked;
+
+    linkToggleButonVar("showGridButton", displayOptions, "showBasePlane", true);
+    linkToggleButonVar("showWireframeButton", displayOptions, "showWireframe", true);
+    linkToggleButonVar("showNormalsButton", displayOptions, "drawNormals", true);
 
     // camera position
     var camXPosSlider = linkGUIModelProperty("camXPosSlider", cameraSelector, "eye", 0);
@@ -623,12 +653,13 @@ function installGuiHandlers(shaderVars) {
     var camZPosSlider = linkGUIModelProperty("camZPosSlider", cameraSelector, "eye", 2);
     selectedCamera.eye = vec3(camXPosSlider.value, camYPosSlider.value, camZPosSlider.value);
 
-    var enableLightingCheckbox = document.getElementById("enableLightingCheckbox");
-    enableLightingCheckbox.onclick = function() {
-        useLighting = enableLightingCheckbox.checked;
-        window.requestAnimFrame(renderFunc);
-    }
-    useLighting = enableLightingCheckbox.checked;
+//    var enableLightingCheckbox = document.getElementById("enableLightingCheckbox");
+//    enableLightingCheckbox.onclick = function() {
+//        useLighting = enableLightingCheckbox.checked;
+//        window.requestAnimFrame(renderFunc);
+//    }
+//    useLighting = enableLightingCheckbox.checked;
+    linkToggleButonVar("enableLightingButton", displayOptions, "useLighting", true);
 //
 //    var lightingModelChooser = document.getElementById("lightingModelChooser");
 //    lightingModelChooser.onchange = function() {
@@ -639,53 +670,53 @@ function installGuiHandlers(shaderVars) {
 
     // position
 
-    var xPosSlider = linkGUIModelProperty("xPosSlider", modelSelector, "position", 0);
-    var xPosText= document.getElementById("xPosText");
+    var xPosSlider = linkGUIModelProperty("modelXPosSlider", modelSelector, "position", 0);
+    var xPosText= document.getElementById("modelXPosText");
     modelPropertyWidgets.push(xPosSlider, xPosText);
 
-    var yPosSlider = linkGUIModelProperty("yPosSlider", modelSelector, "position", 1);
-    var yPosText = document.getElementById("yPosText");
+    var yPosSlider = linkGUIModelProperty("modelYPosSlider", modelSelector, "position", 1);
+    var yPosText = document.getElementById("modelYPosText");
     modelPropertyWidgets.push(yPosSlider, yPosText);
 
-    var zPosSlider = linkGUIModelProperty("zPosSlider", modelSelector, "position", 2);
-    var zPosText = document.getElementById("zPosText");
+    var zPosSlider = linkGUIModelProperty("modelZPosSlider", modelSelector, "position", 2);
+    var zPosText = document.getElementById("modelZPosText");
     modelPropertyWidgets.push(zPosSlider, zPosText);
 
-    var posResetButton = document.getElementById("posResetButton");
-    modelPropertyWidgets.push(posResetButton);
+//    var posResetButton = document.getElementById("posResetButton");
+//    modelPropertyWidgets.push(posResetButton);
 
     // rotation
 
-    var xRotSlider = linkGUIModelProperty("xRotSlider", modelSelector, "rotation", 0, Math.radians);
-    var xRotText= document.getElementById("xRotText");
-    modelPropertyWidgets.push(xRotSlider, xRotText);
+    var modelXRotSlider = linkGUIModelProperty("modelXRotSlider", modelSelector, "rotation", 0, Math.radians);
+    var modelXRotSlider= document.getElementById("modelXRotSlider");
+    modelPropertyWidgets.push(modelXRotSlider, modelXRotSlider);
 
-    var yRotSlider = linkGUIModelProperty("yRotSlider", modelSelector, "rotation", 1, Math.radians);
-    var yRotText = document.getElementById("yRotText");
-    modelPropertyWidgets.push(yRotSlider, yRotText);
+    var modelYRotSlider = linkGUIModelProperty("modelYRotSlider", modelSelector, "rotation", 1, Math.radians);
+    var modelYRotSlider = document.getElementById("modelYRotSlider");
+    modelPropertyWidgets.push(modelYRotSlider, modelYRotSlider);
 
-    var zRotSlider = linkGUIModelProperty("zRotSlider", modelSelector, "rotation", 2, Math.radians);
-    var zRotText = document.getElementById("zRotText");
-    modelPropertyWidgets.push(zRotSlider, zRotText);
+    var modelZRotSlider = linkGUIModelProperty("modelZRotSlider", modelSelector, "rotation", 2, Math.radians);
+    var modelZRotSlider = document.getElementById("modelZRotSlider");
+    modelPropertyWidgets.push(modelZRotSlider, modelZRotSlider);
 
-    var rotResetButton = document.getElementById("rotResetButton");
-    modelPropertyWidgets.push(rotResetButton);
+//    var rotResetButton = document.getElementById("rotResetButton");
+//    modelPropertyWidgets.push(rotResetButton);
 
     // scale
-    var xScaleSlider = linkGUIModelProperty("xScaleSlider", modelSelector, "scale", 0);
-    var xScaleText= document.getElementById("xScaleText");
-    modelPropertyWidgets.push(xScaleSlider, xScaleText);
+    var modelXScaleSlider = linkGUIModelProperty("modelXScaleSlider", modelSelector, "scale", 0);
+    var modelXScaleText= document.getElementById("modelXScaleText");
+    modelPropertyWidgets.push(modelXScaleSlider, modelXScaleText);
 
-    var yScaleSlider = linkGUIModelProperty("yScaleSlider", modelSelector, "scale", 1);
-    var yScaleText = document.getElementById("yScaleText");
-    modelPropertyWidgets.push(yScaleSlider, yScaleText);
+    var modelYScaleSlider = linkGUIModelProperty("modelYScaleSlider", modelSelector, "scale", 1);
+    var modelYScaleText = document.getElementById("modelYScaleText");
+    modelPropertyWidgets.push(modelYScaleSlider, modelYScaleText);
 
-    var zScaleSlider = linkGUIModelProperty("zScaleSlider", modelSelector, "scale", 2);
-    var zScaleText = document.getElementById("zScaleText");
-    modelPropertyWidgets.push(zScaleSlider, zScaleText);
+    var modelZScaleSlider = linkGUIModelProperty("modelZScaleSlider", modelSelector, "scale", 2);
+    var modelZScaleText = document.getElementById("modelZScaleText");
+    modelPropertyWidgets.push(modelZScaleSlider, modelZScaleText);
 
-    var scaleResetButton = document.getElementById("scaleResetButton");
-    modelPropertyWidgets.push(scaleResetButton);
+//    var scaleResetButton = document.getElementById("scaleResetButton");
+//    modelPropertyWidgets.push(scaleResetButton);
 
     var selModelHandler = function() {
         selectedModelName = selModelChooser.value;
@@ -833,8 +864,9 @@ function generateConeModel(numPoints, radius, height) {
     var line2Offset = model.vertices.length/2;
     for (var i = 0; i < model.vertices.length/2; i++) {
         var p = model.vertices[i];
-        var v = normalize(vec3(p[0], 0, p[2]));
-        var n = vec3(v[0] * height / radius, radius/height, v[2] * height / radius);
+//        var v = normalize(vec3(p[0], 0, p[2]));
+//        var n = vec3(v[0] * height / radius, radius/height, v[2] * height / radius);
+        var n = vec3(p[0], radius*radius / height, p[2]);
         n = normalize(n);
         model.normals.push(n);
     }
