@@ -231,40 +231,40 @@ void main()
                 <tr>
                     <td>Position</td>
                     <td>
-                        <label for="light0xPosText">X:</label><input id="light0xPosText" type="text" size="1" value="0"
-                                                               oninput="copyValue('light0xPosText', 'light0xPosSlider')">
-                        <label for="light0yPosText">Y:</label><input id="light0yPosText" type="text" size="1" value="0"
-                                                               oninput="copyValue('light0yPosText', 'light0yPosSlider')">
-                        <label for="light0zPosText">Z:</label><input id="light0zPosText" type="text" size="1" value="0"
-                                                               oninput="copyValue('light0zPosText', 'light0zPosSlider')">
-                        <button id="light0posResetButton" onclick="setValue('light0xPosText',0); setValue('light0yPosText', 0); setValue('light0zPosText', 0);">Reset</button>
+                        <label for="light0modelXPosText">X:</label><input id="light0modelXPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('light0modelXPosText', 'light0modelXPosSlider')">
+                        <label for="light0modelYPosText">Y:</label><input id="light0modelYPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('light0modelYPosText', 'light0modelYPosSlider')">
+                        <label for="light0modelZPosText">Z:</label><input id="light0modelZPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('light0modelZPosText', 'light0modelZPosSlider')">
+                        <button id="light0posResetButton" onclick="setValue('light0modelXPosText',0); setValue('light0modelYPosText', 0); setValue('light0modelZPosText', 0);">Reset</button>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="light0xPosSlider">X</label>
+                        <label for="light0modelXPosSlider">X</label>
                     </td>
                     <td>
-                        <input id="light0xPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
-                               oninput="copyValue('light0xPosSlider', 'light0xPosText')"/>
+                        <input id="light0modelXPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('light0modelXPosSlider', 'light0modelXPosText')"/>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="light0yPosSlider">Y</label>
+                        <label for="light0modelYPosSlider">Y</label>
                     </td>
                     <td>
-                        <input id="light0yPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
-                               oninput="copyValue('light0yPosSlider', 'light0yPosText')"/>
+                        <input id="light0modelYPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('light0modelYPosSlider', 'light0modelYPosText')"/>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="light0zPosSlider">Z</label>
+                        <label for="light0modelZPosSlider">Z</label>
                     </td>
                     <td>
-                        <input id="light0zPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
-                               oninput="copyValue('light0zPosSlider', 'light0zPosText')"/>
+                        <input id="light0modelZPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('light0modelZPosSlider', 'light0modelZPosText')"/>
                     </td>
                 </tr>
 
@@ -311,127 +311,127 @@ void main()
                 <tr>
                     <td>Position</td>
                     <td>
-                        <label for="xPosText">X:</label><input id="xPosText" type="text" size="1" value="0"
-                                                               oninput="copyValue('xPosText', 'xPosSlider')">
-                        <label for="yPosText">Y:</label><input id="yPosText" type="text" size="1" value="0"
-                                                               oninput="copyValue('yPosText', 'yPosSlider')">
-                        <label for="zPosText">Z:</label><input id="zPosText" type="text" size="1" value="0"
-                                                               oninput="copyValue('zPosText', 'zPosSlider')">
-                        <button id="posResetButton" onclick="setValue('xPosText',0); setValue('yPosText', 0); setValue('zPosText', 0);">Reset</button>
+                        <label for="modelXPosText">X:</label><input id="modelXPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('modelXPosText', 'modelXPosSlider')">
+                        <label for="modelYPosText">Y:</label><input id="modelYPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('modelYPosText', 'modelYPosSlider')">
+                        <label for="modelZPosText">Z:</label><input id="modelZPosText" type="text" size="1" value="0"
+                                                               oninput="copyValue('modelZPosText', 'modelZPosSlider')">
+                        <button id="posResetButton" onclick="setValue('modelXPosText',0); setValue('modelYPosText', 0); setValue('modelZPosText', 0);">Reset</button>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="xPosSlider">X</label>
+                        <label for="modelXPosSlider">X</label>
                     </td>
                     <td>
-                        <input id="xPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
-                               oninput="copyValue('xPosSlider', 'xPosText')"/>
+                        <input id="modelXPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('modelXPosSlider', 'modelXPosText')"/>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="yPosSlider">Y</label>
+                        <label for="modelYPosSlider">Y</label>
                     </td>
                     <td>
-                        <input id="yPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
-                               oninput="copyValue('yPosSlider', 'yPosText')"/>
+                        <input id="modelYPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('modelYPosSlider', 'modelYPosText')"/>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="zPosSlider">Z</label>
+                        <label for="modelZPosSlider">Z</label>
                     </td>
                     <td>
-                        <input id="zPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
-                               oninput="copyValue('zPosSlider', 'zPosText')"/>
+                        <input id="modelZPosSlider" type="range" min="-10" max="10" value="0" step="0.01"
+                               oninput="copyValue('modelZPosSlider', 'modelZPosText')"/>
                     </td>
                 </tr>
 
                 <tr>
                     <td>Rotation</td>
                     <td>
-                        <label for="xRotText">X:</label><input id="xRotText" name="xRotText" type="text" size="1" value="0"
-                                                               for="xRotSlider" oninput="xRotSlider.value=xRotText.value"/>
-                                                               <!--oninput="copyValue('xRotText', 'xRotSlider')">-->
-                        <label for="yRotText">Y:</label><input id="yRotText" name="yRotText" type="text" size="1" value="0"
-                                                               for="yRotSlider" oninput="yRotSlider.value=yRotText.value"/>
-                                                               <!--oninput="copyValue('yRotText', 'yRotSlider')">-->
-                        <label for="zRotText">Z:</label><input id="zRotText" name="zRotText" type="text" size="1" value="0"
-                                                               for="zRotSlider" oninput="zRotSlider.value=zRotText.value"/>
-                                                               <!--oninput="copyValue('zRotText', 'zRotSlider')">-->
-                        <button id="rotResetButton" onclick="setValue('xRotText',0); setValue('yRotText', 0); setValue('zRotText', 0);">Reset</button>
-                        <!--<button id="rotResetButton" onclick="xRotText.value=0; xRotSlider.value=0; yRotText.value=0; yRotSlider.value=0; zRotText.value=0; zRotSlider.value=0;">Reset</button>-->
+                        <label for="modelXRotText">X:</label><input id="modelXRotText" name="modelXRotText" type="text" size="1" value="0"
+                                                               for="modelXRotSlider" oninput="modelXRotSlider.value=modelXRotText.value"/>
+                                                               <!--oninput="copyValue('modelXRotText', 'modelXRotSlider')">-->
+                        <label for="modelYRotText">Y:</label><input id="modelYRotText" name="modelYRotText" type="text" size="1" value="0"
+                                                               for="modelYRotSlider" oninput="modelYRotSlider.value=modelYRotText.value"/>
+                                                               <!--oninput="copyValue('modelYRotText', 'modelYRotSlider')">-->
+                        <label for="modelZRotText">Z:</label><input id="modelZRotText" name="modelZRotText" type="text" size="1" value="0"
+                                                               for="modelZRotSlider" oninput="modelZRotSlider.value=modelZRotText.value"/>
+                                                               <!--oninput="copyValue('modelZRotText', 'modelZRotSlider')">-->
+                        <button id="rotResetButton" onclick="setValue('modelXRotText',0); setValue('modelYRotText', 0); setValue('modelZRotText', 0);">Reset</button>
+                        <!--<button id="rotResetButton" onclick="modelXRotText.value=0; modelXRotSlider.value=0; modelYRotText.value=0; modelYRotSlider.value=0; modelZRotText.value=0; modelZRotSlider.value=0;">Reset</button>-->
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="xRotSlider">X</label>
+                        <label for="modelXRotSlider">X</label>
                     </td>
                     <td>
-                        <input id="xRotSlider" name="xRotSlider" type="range" min="-180" max="180" value="0" step="1"
-                                oninput="xRotText.value=xRotSlider.value"/>
-                               <!--oninput="copyValue('xRotSlider', 'xRotText')"/>-->
+                        <input id="modelXRotSlider" name="modelXRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                                oninput="modelXRotText.value=modelXRotSlider.value"/>
+                               <!--oninput="copyValue('modelXRotSlider', 'modelXRotText')"/>-->
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="yRotSlider">Y</label>
+                        <label for="modelYRotSlider">Y</label>
                     </td>
                     <td>
-                        <input id="yRotSlider" name="yRotSlider" type="range" min="-180" max="180" value="0" step="1"
-                               oninput="yRotText.value=yRotSlider.value"/>
-                               <!--oninput="copyValue('yRotSlider', 'yRotText')"/>-->
+                        <input id="modelYRotSlider" name="modelYRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                               oninput="modelYRotText.value=modelYRotSlider.value"/>
+                               <!--oninput="copyValue('modelYRotSlider', 'modelYRotText')"/>-->
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="zRotSlider">Z</label>
+                        <label for="modelZRotSlider">Z</label>
                     </td>
                     <td>
-                        <input id="zRotSlider" name="zRotSlider" type="range" min="-180" max="180" value="0" step="1"
-                               oninput="zRotText.value=zRotSlider.value"/>
-                               <!--oninput="copyValue('zRotSlider', 'zRotText')"/>-->
+                        <input id="modelZRotSlider" name="modelZRotSlider" type="range" min="-180" max="180" value="0" step="1"
+                               oninput="modelZRotText.value=modelZRotSlider.value"/>
+                               <!--oninput="copyValue('modelZRotSlider', 'modelZRotText')"/>-->
                     </td>
                 </tr>
 
                 <tr>
                     <td>Scale</td>
                     <td>
-                        <label for="xScaleText">X:</label><input id="xScaleText" type="text" size="1" value="1"
-                                                               oninput="copyValue('xScaleText', 'xScaleSlider')">
-                        <label for="yScaleText">Y:</label><input id="yScaleText" type="text" size="1" value="1"
-                                                               oninput="copyValue('yScaleText', 'yScaleSlider')">
-                        <label for="zScaleText">Z:</label><input id="zScaleText" type="text" size="1" value="1"
-                                                               oninput="copyValue('zScaleText', 'zScaleSlider')">
-                        <button id="scaleResetButton" onclick="setValue('xScaleText',1); setValue('yScaleText', 1); setValue('zScaleText', 1);">Reset</button>
+                        <label for="modelXScaleText">X:</label><input id="modelXScaleText" type="text" size="1" value="1"
+                                                               oninput="copyValue('modelXScaleText', 'modelXScaleSlider')">
+                        <label for="modelYScaleText">Y:</label><input id="modelYScaleText" type="text" size="1" value="1"
+                                                               oninput="copyValue('modelYScaleText', 'modelYScaleSlider')">
+                        <label for="modelZScaleText">Z:</label><input id="modelZScaleText" type="text" size="1" value="1"
+                                                               oninput="copyValue('modelZScaleText', 'modelZScaleSlider')">
+                        <button id="scaleResetButton" onclick="setValue('modelXScaleText',1); setValue('modelYScaleText', 1); setValue('modelZScaleText', 1);">Reset</button>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="xScaleSlider">X</label>
+                        <label for="modelXScaleSlider">X</label>
                     </td>
                     <td>
-                        <input id="xScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
-                               oninput="copyValue('xScaleSlider', 'xScaleText')"/>
+                        <input id="modelXScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
+                               oninput="copyValue('modelXScaleSlider', 'modelXScaleText')"/>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="yScaleSlider">Y</label>
+                        <label for="modelYScaleSlider">Y</label>
                     </td>
                     <td>
-                        <input id="yScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
-                               oninput="copyValue('yScaleSlider', 'yScaleText')"/>
+                        <input id="modelYScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
+                               oninput="copyValue('modelYScaleSlider', 'modelYScaleText')"/>
                     </td>
                 </tr>
                 <tr>
                     <td class="label">
-                        <label for="zScaleSlider">Z</label>
+                        <label for="modelZScaleSlider">Z</label>
                     </td>
                     <td>
-                        <input id="zScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
-                               oninput="copyValue('zScaleSlider', 'zScaleText')"/>
+                        <input id="modelZScaleSlider" type="range" min="0" max="10" value="1" step="0.01"
+                               oninput="copyValue('modelZScaleSlider', 'modelZScaleText')"/>
                     </td>
                 </tr>
                 

@@ -271,7 +271,11 @@ function render(simpleShaderVars, lightingShaderVars, camera, basePlaneGrid) {
     gl.clearColor(sheetColor[0], sheetColor[1], sheetColor[2], sheetColor[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    camera.viewMatrix = lookAt(camera.eye, camera.at, camera.up);
+    var at = camera.at;
+    if (arraysEqual(camera.eye, camera.at)) { // prevent error on this special case
+        at = add(camera.eye(0, 0, -1));
+    }
+    camera.viewMatrix = lookAt(camera.eye, at, camera.up);
 
     gl.useProgram(simpleShaderVars.program);
     gl.uniformMatrix4fv(simpleShaderVars.projectionMatrix, false, flatten(camera.projectionMatrix));
@@ -602,50 +606,28 @@ function isActiveClassSet(classStr) {
     return classStr.search(/(^|\s)active(\s|$)/) == "active";
 }
 
-function linkToggleButonVar(buttonId, variables, variable, repaint) {
-    var button = document.getElementById(buttonId);
-    var oldOnClick = button.onclick;
-    button.onclick = function() {
-        if (isValid(oldOnClick)) {
-            oldOnClick();
-        }
-
-        variables[variable] = isActiveClassSet(button.className);
-
-        if (repaint) {
-            window.requestAnimFrame(renderFunc);
-        }
-    };
-    variables[variable] = isActiveClassSet(button.className);
-}
-
-
 function installGuiHandlers(shaderVars) {
-//    var showGridCheckbox = document.getElementById("showGridCheckbox");
-//    showGridCheckbox.onclick = function() {
-//        displayOptions.showBasePlaneGrid = showGridCheckbox.checked;
-//        window.requestAnimFrame(renderFunc);
-//    }
-//    displayOptions.showBasePlaneGrid = showGridCheckbox.checked;
+    var showGridCheckbox = document.getElementById("showGridCheckbox");
+    showGridCheckbox.onclick = function() {
+        displayOptions.showBasePlaneGrid = showGridCheckbox.checked;
+        window.requestAnimFrame(renderFunc);
+    }
+    displayOptions.showBasePlaneGrid = showGridCheckbox.checked;
 
 
-//    var showWireframeCheckbox = document.getElementById("showWireframeCheckbox");
-//    showWireframeCheckbox.onclick = function() {
-//        showWireframe = showWireframeCheckbox.checked;
-//        window.requestAnimFrame(renderFunc);
-//    }
-//    showWireframe = showWireframeCheckbox.checked;
+    var showWireframeCheckbox = document.getElementById("showWireframeCheckbox");
+    showWireframeCheckbox.onclick = function() {
+        displayOptions.showWireframe = showWireframeCheckbox.checked;
+        window.requestAnimFrame(renderFunc);
+    }
+    displayOptions.showWireframe = showWireframeCheckbox.checked;
 
-//    var drawNormalsCheckbox = document.getElementById("drawNormalsCheckbox");
-//    drawNormalsCheckbox.onclick = function() {
-//        drawNormals = drawNormalsCheckbox.checked;
-//        window.requestAnimFrame(renderFunc);
-//    }
-//    drawNormals = drawNormalsCheckbox.checked;
-
-    linkToggleButonVar("showGridButton", displayOptions, "showBasePlane", true);
-    linkToggleButonVar("showWireframeButton", displayOptions, "showWireframe", true);
-    linkToggleButonVar("showNormalsButton", displayOptions, "drawNormals", true);
+    var drawNormalsCheckbox = document.getElementById("drawNormalsCheckbox");
+    drawNormalsCheckbox.onclick = function() {
+        displayOptions.drawNormals = drawNormalsCheckbox.checked;
+        window.requestAnimFrame(renderFunc);
+    }
+    displayOptions.drawNormals = drawNormalsCheckbox.checked;
 
     // camera position
     var camXPosSlider = linkGUIModelProperty("camXPosSlider", cameraSelector, "eye", 0);
@@ -653,13 +635,13 @@ function installGuiHandlers(shaderVars) {
     var camZPosSlider = linkGUIModelProperty("camZPosSlider", cameraSelector, "eye", 2);
     selectedCamera.eye = vec3(camXPosSlider.value, camYPosSlider.value, camZPosSlider.value);
 
-//    var enableLightingCheckbox = document.getElementById("enableLightingCheckbox");
-//    enableLightingCheckbox.onclick = function() {
-//        useLighting = enableLightingCheckbox.checked;
-//        window.requestAnimFrame(renderFunc);
-//    }
-//    useLighting = enableLightingCheckbox.checked;
-    linkToggleButonVar("enableLightingButton", displayOptions, "useLighting", true);
+    var enableLightingCheckbox = document.getElementById("enableLightingCheckbox");
+    enableLightingCheckbox.onclick = function() {
+        displayOptions.useLighting = enableLightingCheckbox.checked;
+        window.requestAnimFrame(renderFunc);
+    }
+    displayOptions.useLighting = enableLightingCheckbox.checked;
+
 //
 //    var lightingModelChooser = document.getElementById("lightingModelChooser");
 //    lightingModelChooser.onchange = function() {
@@ -670,17 +652,17 @@ function installGuiHandlers(shaderVars) {
 
     // position
 
-    var xPosSlider = linkGUIModelProperty("modelXPosSlider", modelSelector, "position", 0);
-    var xPosText= document.getElementById("modelXPosText");
-    modelPropertyWidgets.push(xPosSlider, xPosText);
+    var modelXPosSlider = linkGUIModelProperty("modelXPosSlider", modelSelector, "position", 0);
+    var modelXPosText= document.getElementById("modelXPosText");
+    modelPropertyWidgets.push(modelXPosSlider, modelXPosText);
 
-    var yPosSlider = linkGUIModelProperty("modelYPosSlider", modelSelector, "position", 1);
-    var yPosText = document.getElementById("modelYPosText");
-    modelPropertyWidgets.push(yPosSlider, yPosText);
+    var modelYPosSlider = linkGUIModelProperty("modelYPosSlider", modelSelector, "position", 1);
+    var modelYPosText = document.getElementById("modelYPosText");
+    modelPropertyWidgets.push(modelYPosSlider, modelYPosText);
 
-    var zPosSlider = linkGUIModelProperty("modelZPosSlider", modelSelector, "position", 2);
-    var zPosText = document.getElementById("modelZPosText");
-    modelPropertyWidgets.push(zPosSlider, zPosText);
+    var modelZPosSlider = linkGUIModelProperty("modelZPosSlider", modelSelector, "position", 2);
+    var modelZPosText = document.getElementById("modelZPosText");
+    modelPropertyWidgets.push(modelZPosSlider, modelZPosText);
 
 //    var posResetButton = document.getElementById("posResetButton");
 //    modelPropertyWidgets.push(posResetButton);
@@ -745,25 +727,25 @@ function installGuiHandlers(shaderVars) {
 
         selModelHandler();
     }
-}
 
-function updateModelPropertyWidgets() {
-    for (var i = 0; i < modelPropertyWidgets.length; i++) {
-        var selectedModel = modelInstances[selectedModelName];
-        modelPropertyWidgets[i].disabled = (selectedModel == null);
+    function updateModelPropertyWidgets() {
+        for (var i = 0; i < modelPropertyWidgets.length; i++) {
+            var selectedModel = modelInstances[selectedModelName];
+            modelPropertyWidgets[i].disabled = (selectedModel == null);
 
-        if (selectedModel != null) {
-            xPosSlider.value = xPosText.value = selectedModel.position[0];
-            yPosSlider.value = yPosText.value = selectedModel.position[1];
-            zPosSlider.value = zPosText.value = selectedModel.position[2];
+            if (selectedModel != null) {
+                modelXPosSlider.value = modelXPosText.value = selectedModel.position[0];
+                modelYPosSlider.value = modelYPosText.value = selectedModel.position[1];
+                modelZPosSlider.value = modelZPosText.value = selectedModel.position[2];
 
-            xRotSlider.value = xRotText.value = Math.degrees(selectedModel.rotation[0]);
-            yRotSlider.value = yRotText.value = Math.degrees(selectedModel.rotation[1]);
-            zRotSlider.value = zRotText.value = Math.degrees(selectedModel.rotation[2]);
+                modelXRotSlider.value = modelXRotText.value = Math.degrees(selectedModel.rotation[0]);
+                modelYRotSlider.value = modelYRotText.value = Math.degrees(selectedModel.rotation[1]);
+                modelZRotSlider.value = modelZRotText.value = Math.degrees(selectedModel.rotation[2]);
 
-            xScaleSlider.value = xScaleText.value= selectedModel.scale[0];
-            yScaleSlider.value = yScaleText.value= selectedModel.scale[1];
-            zScaleSlider.value = zScaleText.value= selectedModel.scale[2];
+                modelXScaleSlider.value = modelXScaleText.value= selectedModel.scale[0];
+                modelYScaleSlider.value = modelYScaleText.value= selectedModel.scale[1];
+                modelZScaleSlider.value = modelZScaleText.value= selectedModel.scale[2];
+            }
         }
     }
 }
@@ -1452,4 +1434,8 @@ function transform(v, M) {
         }
     }
     return v2;
+}
+
+function arraysEqual(a1, a2) {
+    return a1.length == a2.length && a1.every(function(v,i) { return v == a2[i]});
 }
